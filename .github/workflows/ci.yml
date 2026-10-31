@@ -24,11 +24,11 @@ jobs:
           flutter-version: ${{ matrix.flutter }}
           channel: stable
           cache: true
-      - run: flutter pub get
+      # The example needs newer Flutter than the package, so it is left out here.
+      - run: flutter pub get --no-example
       - name: Format
         if: matrix.flutter == '3.x'
         run: dart format --output=none --set-exit-if-changed lib test
-      # The example and the benchmark need newer Flutter, so only the package is analyzed.
       - run: flutter analyze lib test
       - run: flutter test
 
