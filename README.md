@@ -166,6 +166,14 @@ Not tested yet: iPhones, other Android chips (Qualcomm, Exynos, Tensor), HDR sou
 wrong), and building with Flutter 3.27 itself (the Dart code is checked at the
 3.6 language level and the Android side builds with `compileSdk` 35).
 
+## Compared with other packages
+
+On a Xiaomi 14T Pro with two 1080p60 camera videos, at each package's 720p
+preset, video_compress_next was the fastest (3.5 to 5.3 s against 9.7 to
+21.6 s for video_compress), made the smallest files and had the best SSIM
+and PSNR. compress_video and v_video_compressor failed on that phone. Details,
+limits and how to run it: [benchmark/README.md](benchmark/README.md).
+
 ## Development
 
 ```bash
