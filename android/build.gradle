@@ -22,7 +22,22 @@ allprojects {
 }
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+
+// Kotlin. With AGP 9+ and built-in Kotlin (android.builtInKotlin not set to
+// false) AGP compiles Kotlin itself and a plugin must not apply the Kotlin
+// Gradle Plugin (KGP). Everywhere else KGP is needed, and Flutter before 3.44
+// does not add it to plugins, so the plugin applies it there. This mirrors
+// isBuiltInKotlinEnabled in Flutter's Gradle plugin. KGP is applied with
+// pluginManager and not with "apply plugin:" on purpose: Flutter 3.44+ scans
+// this file for that line, warns about it, and otherwise applies KGP itself
+// when built-in Kotlin is off, which is harmless next to this (applying a
+// plugin twice does nothing).
+def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize(".")[0].toInteger()
+def builtInKotlinProperty = providers.gradleProperty("android.builtInKotlin").getOrNull()
+def builtInKotlin = agpMajor >= 9 && (builtInKotlinProperty == null || builtInKotlinProperty.toBoolean())
+if (!builtInKotlin) {
+    pluginManager.apply("kotlin-android")
+}
 
 // Media3 1.9.x is the newest line that builds with compileSdk 35; 1.10+ needs
 // compileSdk 36. An app can pick another version in its android/gradle.properties:
@@ -38,10 +53,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11
     }
 
     sourceSets {
@@ -70,6 +81,20 @@ android {
                outputs.upToDateWhen {false}
                showStandardStreams = true
             }
+        }
+    }
+}
+
+if (builtInKotlin) {
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        }
+    }
+} else {
+    android {
+        kotlinOptions {
+            jvmTarget = JavaVersion.VERSION_11
         }
     }
 }

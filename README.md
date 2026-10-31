@@ -25,6 +25,12 @@ dependency and the import (see [below](#moving-from-video_compress)).
 | Android | `minSdk` 23, `compileSdk` 35 | Media3 Transformer 1.9.4 by default |
 | iOS | 13.0 | `AVAssetReader` / `AVAssetWriter` |
 
+On Android the plugin works with built-in Kotlin (AGP 9 with
+`android.builtInKotlin=true`, Flutter 3.47+) and does not appear in Flutter's
+"plugins that apply Kotlin Gradle Plugin" warning. With AGP 8 or built-in
+Kotlin turned off it applies the Kotlin Gradle Plugin itself, which older
+Flutter versions need.
+
 ### Choosing the Media3 version (Android)
 
 Media3 1.9.x is the newest line that builds with `compileSdk` 35. If your app
