@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -50,10 +51,14 @@ void main() {
 
   testWidgets('compresses 1080p60 to a smaller, readable 720p30 file', (_) async {
     final source = await VideoCompressor.getMediaInfo(landscape);
+    final watch = Stopwatch()..start();
     final task = VideoCompressor.compress(landscape);
     final progress = <double>[];
     task.progress.listen(progress.add);
     final result = await task.result;
+    debugPrint('MEASURE ${source.fileSize} -> ${result.fileSize} bytes, '
+        '${result.width}x${result.height}, ${result.frameRate?.toStringAsFixed(1)} fps, '
+        '${result.bitrate} bps, ${watch.elapsedMilliseconds} ms, ${progress.length} progress events');
 
     expect(File(result.path).existsSync(), isTrue);
     expect(result.fileSize, lessThan(source.fileSize ~/ 2));
