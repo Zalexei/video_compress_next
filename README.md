@@ -5,7 +5,7 @@ Video compression for Flutter on the phone's own hardware encoders:
 FFmpeg, so it adds little to your app and raises no GPL questions.
 
 It is a successor to [`video_compress`](https://pub.dev/packages/video_compress),
-which has had no release since 2025-02-13 and has over 200 open issues. The
+which has had no release since 2025-02-13 and has over 170 open issues. The
 `video_compress` API is included, so moving over is a change of the
 dependency and the import (see [below](#moving-from-video_compress)).
 
@@ -17,6 +17,8 @@ dependency and the import (see [below](#moving-from-video_compress)).
 - Media info (displayed size, rotation, duration, bitrate, frame rate, codec)
   and JPEG thumbnails as bytes or files.
 - Works with Flutter 3.27 and newer and `compileSdk` 35.
+
+<img src="https://raw.githubusercontent.com/Zalexei/video_compress_next/main/doc/screenshot.png" width="270" alt="The example app after compressing a 1080p60 video to 720p30">
 
 ## Platforms
 
@@ -164,13 +166,11 @@ for per-task progress and cancel, typed errors, HEVC and exact sizes.
 
 ## Status
 
-Version 0.1.0, not published yet.
-
-Tested by the integration tests in `example/integration_test` (media info,
-1080p60 to 720p30, a rotated portrait video, trim, audio removal, HEVC,
-cancel right after the start and during the work, a 30 to 24 fps cap, a
-voice recording with 16 kHz mono sound, a missing file, and the
-`video_compress` API):
+Version 0.1.0, the first release. Tested by the integration tests in
+`example/integration_test` (media info, 1080p60 to 720p30, a rotated portrait
+video, trim, audio removal, HEVC, cancel right after the start and during the
+work, a 30 to 24 fps cap, a voice recording with 16 kHz mono sound, a missing
+file, and the `video_compress` API):
 
 - Android: Pixel 9a emulator, Android API 37, with Media3 1.9.4 and with
   1.11.1. The 2-second 1080p60 sample of 1.61 MB became 0.80 MB at 720p30
@@ -186,10 +186,13 @@ Hardware encoders treat the bitrate as a target, not a limit: on the Xiaomi
 the camera video came out about a third above it, and a noise-heavy test clip
 almost twice. Emulators and simulators keep to it closely.
 
-Not tested yet: iPhones, other Android chips (Qualcomm, Exynos, Tensor), HDR sources
-(Android tone-maps them to SDR with OpenGL; on iOS HDR colors may come out
-wrong), and building with Flutter 3.27 itself (the Dart code is checked at the
-3.6 language level and the Android side builds with `compileSdk` 35).
+With the oldest supported Flutter, 3.27.4, the unit tests pass and a new app
+with the plugin builds for Android (AGP 8.1, Kotlin 1.8.22); with Flutter
+3.47.2 it builds with AGP 9.1 and Kotlin 2.4. CI checks both on every push.
+
+Not tested yet: iPhones, other Android chips (Qualcomm, Exynos, Tensor), HDR
+sources (Android tone-maps them to SDR with OpenGL; on iOS HDR colors may come
+out wrong), and iOS builds with Flutter older than 3.35.
 
 ## Compared with other packages
 
@@ -205,7 +208,7 @@ limits and how to run it: [benchmark/README.md](benchmark/README.md).
 flutter test                                    # Dart unit tests
 cd example && flutter test integration_test -d <device>
 # Add --dart-define=REAL_VIDEO=<path on the device> to also compress a real video.
-dart run pigeon --input pigeons/messages.dart   # after editing the contract
+dart run pigeon --input pigeons/messages.dart && dart format lib   # after editing the contract
 ```
 
 The dev tools (Pigeon 26.0.1) work from Dart 3.6, the package's minimum, up.

@@ -15,6 +15,7 @@ enum VideoQuality {
   Res1920x1080Quality,
 }
 
+/// The [CompressOptions] of each [VideoQuality].
 extension VideoQualityOptions on VideoQuality {
   /// The size limits this level stands for. They follow what `video_compress`
   /// did on Android, where it limited the shorter side; the bitrate now comes
@@ -24,7 +25,8 @@ extension VideoQualityOptions on VideoQuality {
         VideoQuality.LowQuality => const CompressOptions(maxShortSide: 360),
         VideoQuality.MediumQuality => const CompressOptions(maxShortSide: 640),
         // video_compress kept the size and fixed 3.7 Mbps, which made 4K blocky.
-        VideoQuality.HighestQuality => const CompressOptions(maxShortSide: 1080),
+        VideoQuality.HighestQuality =>
+          const CompressOptions(maxShortSide: 1080),
         VideoQuality.Res640x480Quality =>
           const CompressOptions(maxShortSide: 480, maxLongSide: 640),
         VideoQuality.Res960x540Quality =>

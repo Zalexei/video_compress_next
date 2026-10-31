@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:video_compress_next/src/video_compressor.dart' show VideoCompressor;
+import 'package:video_compress_next/src/video_compressor.dart'
+    show VideoCompressor;
 import 'package:video_compress_next/video_compress.dart';
 
 import 'fake_host_api.dart';
@@ -17,7 +18,8 @@ void main() {
     temp = Directory.systemTemp.createTempSync('vcn_compat');
     api = FakeHostApi(cacheDir: temp.path)
       ..files['/in.mp4'] = videoInfo('/in.mp4', frameRate: 60)
-      ..outputInfo = (r) => videoInfo(r.outputPath, width: r.width!, height: r.height!, fileSize: 1234);
+      ..outputInfo = (r) => videoInfo(r.outputPath,
+          width: r.width!, height: r.height!, fileSize: 1234);
     VideoCompressor.hostApi = api;
     VideoCompress.dispose();
   });
@@ -39,9 +41,11 @@ void main() {
     expect(VideoQuality.Res640x480Quality.options.maxLongSide, 640);
   });
 
-  test('compressVideo maps the old arguments and reports progress 0 to 100', () async {
+  test('compressVideo maps the old arguments and reports progress 0 to 100',
+      () async {
     final progress = <double>[];
-    final subscription = VideoCompress.compressProgress$.subscribe(progress.add);
+    final subscription =
+        VideoCompress.compressProgress$.subscribe(progress.add);
 
     final future = VideoCompress.compressVideo(
       '/in.mp4',
@@ -108,7 +112,8 @@ void main() {
   });
 
   test('getMediaInfo fills the old fields', () async {
-    api.files['/portrait.mp4'] = videoInfo('/portrait.mp4', width: 1080, height: 1920, rotation: 90);
+    api.files['/portrait.mp4'] =
+        videoInfo('/portrait.mp4', width: 1080, height: 1920, rotation: 90);
     final info = await VideoCompress.getMediaInfo('/portrait.mp4');
     expect((info.width, info.height, info.orientation), (1080, 1920, 90));
     expect(info.filesize, 20000000);
@@ -116,8 +121,10 @@ void main() {
     expect(info.title, '');
   });
 
-  test('thumbnails: bytes capped at 512 px, files named after the video', () async {
-    final bytes = await VideoCompress.getByteThumbnail('/in.mp4', quality: 50, position: 1500);
+  test('thumbnails: bytes capped at 512 px, files named after the video',
+      () async {
+    final bytes = await VideoCompress.getByteThumbnail('/in.mp4',
+        quality: 50, position: 1500);
     expect(bytes, isNotNull);
     expect(api.lastThumbnail!.maxSide, 512);
     expect(api.lastThumbnail!.positionMs, 1500);
@@ -144,8 +151,19 @@ void main() {
     });
     final json = jsonDecode(jsonEncode(info.toJson())) as Map<String, dynamic>;
     final again = MediaInfo.fromJson(json);
-    expect((again.width, again.height, again.orientation, again.filesize, again.duration),
-        (640, 360, 90, 100, 1500.5));
+    expect((
+      again.width,
+      again.height,
+      again.orientation,
+      again.filesize,
+      again.duration
+    ), (
+      640,
+      360,
+      90,
+      100,
+      1500.5
+    ));
     expect(again.file!.path, '/a.mp4');
   });
 }

@@ -16,7 +16,8 @@ PlatformException _createConnectionError(String channelName) {
   );
 }
 
-List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+List<Object?> wrapResponse(
+    {Object? result, PlatformException? error, bool empty = false}) {
   if (empty) {
     return <Object?>[];
   }
@@ -25,20 +26,21 @@ List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty
   }
   return <Object?>[error.code, error.message, error.details];
 }
+
 bool _deepEquals(Object? a, Object? b) {
   if (a is List && b is List) {
     return a.length == b.length &&
         a.indexed
-        .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
   }
   if (a is Map && b is Map) {
-    return a.length == b.length && a.entries.every((MapEntry<Object?, Object?> entry) =>
-        (b as Map<Object?, Object?>).containsKey(entry.key) &&
-        _deepEquals(entry.value, b[entry.key]));
+    return a.length == b.length &&
+        a.entries.every((MapEntry<Object?, Object?> entry) =>
+            (b as Map<Object?, Object?>).containsKey(entry.key) &&
+            _deepEquals(entry.value, b[entry.key]));
   }
   return a == b;
 }
-
 
 /// Video codec of the compressed file.
 enum NativeVideoCodec {
@@ -109,7 +111,8 @@ class NativeMediaInfo {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeMediaInfo decode(Object result) {
     result as List<Object?>;
@@ -143,8 +146,7 @@ class NativeMediaInfo {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// One compression, already planned on the Dart side: the native code only
@@ -212,7 +214,8 @@ class NativeCompressRequest {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeCompressRequest decode(Object result) {
     result as List<Object?>;
@@ -246,8 +249,7 @@ class NativeCompressRequest {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class NativeThumbnailRequest {
@@ -279,7 +281,8 @@ class NativeThumbnailRequest {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeThumbnailRequest decode(Object result) {
     result as List<Object?>;
@@ -305,10 +308,8 @@ class NativeThumbnailRequest {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -317,16 +318,16 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is NativeVideoCodec) {
+    } else if (value is NativeVideoCodec) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is NativeMediaInfo) {
+    } else if (value is NativeMediaInfo) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeCompressRequest) {
+    } else if (value is NativeCompressRequest) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeThumbnailRequest) {
+    } else if (value is NativeThumbnailRequest) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
     } else {
@@ -337,14 +338,14 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         final int? value = readValue(buffer) as int?;
         return value == null ? null : NativeVideoCodec.values[value];
-      case 130: 
+      case 130:
         return NativeMediaInfo.decode(readValue(buffer)!);
-      case 131: 
+      case 131:
         return NativeCompressRequest.decode(readValue(buffer)!);
-      case 132: 
+      case 132:
         return NativeThumbnailRequest.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -356,9 +357,11 @@ class VideoCompressHostApi {
   /// Constructor for [VideoCompressHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  VideoCompressHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  VideoCompressHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -366,13 +369,16 @@ class VideoCompressHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<NativeMediaInfo> getMediaInfo(String path) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.getMediaInfo$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.getMediaInfo$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[path]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[path]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -396,13 +402,16 @@ class VideoCompressHostApi {
   /// Completes when the file at [NativeCompressRequest.outputPath] is
   /// written. Fails with code `cancelled` after [cancel].
   Future<void> compress(NativeCompressRequest request) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.compress$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.compress$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[request]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -420,13 +429,16 @@ class VideoCompressHostApi {
 
   /// Does nothing if the task already finished.
   Future<void> cancel(String taskId) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.cancel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.cancel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[taskId]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[taskId]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -443,13 +455,16 @@ class VideoCompressHostApi {
   }
 
   Future<Uint8List> getThumbnail(NativeThumbnailRequest request) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.getThumbnail$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.getThumbnail$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture =
+        pigeonVar_channel.send(<Object?>[request]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -472,8 +487,10 @@ class VideoCompressHostApi {
 
   /// Folder for compressed videos and thumbnails, created if missing.
   Future<String> cacheDirectory() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.cacheDirectory$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_compress_next.VideoCompressHostApi.cacheDirectory$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -506,18 +523,26 @@ abstract class VideoCompressFlutterApi {
   /// [progress] goes from 0 to 1.
   void onProgress(String taskId, double progress);
 
-  static void setUp(VideoCompressFlutterApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
-    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  static void setUp(
+    VideoCompressFlutterApi? api, {
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) {
+    messageChannelSuffix =
+        messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
     {
-      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.video_compress_next.VideoCompressFlutterApi.onProgress$messageChannelSuffix', pigeonChannelCodec,
+      final BasicMessageChannel<
+          Object?> pigeonVar_channel = BasicMessageChannel<
+              Object?>(
+          'dev.flutter.pigeon.video_compress_next.VideoCompressFlutterApi.onProgress$messageChannelSuffix',
+          pigeonChannelCodec,
           binaryMessenger: binaryMessenger);
       if (api == null) {
         pigeonVar_channel.setMessageHandler(null);
       } else {
         pigeonVar_channel.setMessageHandler((Object? message) async {
           assert(message != null,
-          'Argument for dev.flutter.pigeon.video_compress_next.VideoCompressFlutterApi.onProgress was null.');
+              'Argument for dev.flutter.pigeon.video_compress_next.VideoCompressFlutterApi.onProgress was null.');
           final List<Object?> args = (message as List<Object?>?)!;
           final String? arg_taskId = (args[0] as String?);
           assert(arg_taskId != null,
@@ -530,8 +555,9 @@ abstract class VideoCompressFlutterApi {
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          } catch (e) {
+            return wrapResponse(
+                error: PlatformException(code: 'error', message: e.toString()));
           }
         });
       }

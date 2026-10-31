@@ -1,6 +1,6 @@
 ## 0.1.0
 
-* First version, not published yet.
+* First release.
 * Android: compression with AndroidX Media3 Transformer (1.9.4 by default, any
   1.x through `videoCompressNextMedia3Version`), media info and thumbnails
   with `MediaMetadataRetriever`.

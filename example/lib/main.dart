@@ -10,7 +10,9 @@ void main() => runApp(const MaterialApp(home: CompressPage()));
 
 /// Copies a bundled sample video to a real file, since the plugin reads files.
 Future<String> sampleFile(String asset) async {
-  final file = File('${await VideoCompressor.cacheDirectory()}/sample_${asset.split('/').last}');
+  final file = File(
+    '${await VideoCompressor.cacheDirectory()}/sample_${asset.split('/').last}',
+  );
   if (!file.existsSync()) {
     final data = await rootBundle.load(asset);
     await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
@@ -60,7 +62,8 @@ class _CompressPageState extends State<CompressPage> {
     }
   }
 
-  Future<String?> _pick() async => (await ImagePicker().pickVideo(source: ImageSource.gallery))?.path;
+  Future<String?> _pick() async =>
+      (await ImagePicker().pickVideo(source: ImageSource.gallery))?.path;
 
   Future<void> _compress() async {
     final source = _source!;
@@ -87,7 +90,11 @@ class _CompressPageState extends State<CompressPage> {
         _took = watch.elapsed;
       });
     } on VideoCompressException catch (e) {
-      setState(() => _error = e.error == VideoCompressError.cancelled ? 'Cancelled' : '$e');
+      setState(
+        () => _error = e.error == VideoCompressError.cancelled
+            ? 'Cancelled'
+            : '$e',
+      );
     } finally {
       setState(() => _task = null);
     }
@@ -103,29 +110,46 @@ class _CompressPageState extends State<CompressPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            OutlinedButton(
-              onPressed: busy ? null : () => _open(sampleFile('assets/landscape.mp4')),
-              child: const Text('Sample 1080p60'),
-            ),
-            OutlinedButton(
-              onPressed: busy ? null : () => _open(sampleFile('assets/portrait.mp4')),
-              child: const Text('Sample portrait'),
-            ),
-            OutlinedButton(onPressed: busy ? null : () => _open(_pick()), child: const Text('Gallery')),
-          ]),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: busy
+                    ? null
+                    : () => _open(sampleFile('assets/landscape.mp4')),
+                child: const Text('Sample 1080p60'),
+              ),
+              OutlinedButton(
+                onPressed: busy
+                    ? null
+                    : () => _open(sampleFile('assets/portrait.mp4')),
+                child: const Text('Sample portrait'),
+              ),
+              OutlinedButton(
+                onPressed: busy ? null : () => _open(_pick()),
+                child: const Text('Gallery'),
+              ),
+            ],
+          ),
           if (source != null) ...[
             const SizedBox(height: 16),
-            if (_thumbnail != null) Center(child: Image.memory(_thumbnail!, height: 160)),
+            if (_thumbnail != null)
+              Center(child: Image.memory(_thumbnail!, height: 160)),
             _InfoCard(title: 'Source', info: source),
-            Wrap(spacing: 8, children: [
-              for (final entry in _sizes.entries)
-                ChoiceChip(
-                  label: Text(entry.value),
-                  selected: _shortSide == entry.key,
-                  onSelected: busy ? null : (_) => setState(() => _shortSide = entry.key),
-                ),
-            ]),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final entry in _sizes.entries)
+                  ChoiceChip(
+                    label: Text(entry.value),
+                    selected: _shortSide == entry.key,
+                    onSelected: busy
+                        ? null
+                        : (_) => setState(() => _shortSide = entry.key),
+                  ),
+              ],
+            ),
             SwitchListTile(
               title: const Text('Keep audio'),
               value: _audio,
@@ -140,11 +164,19 @@ class _CompressPageState extends State<CompressPage> {
               LinearProgressIndicator(value: _progress),
               const SizedBox(height: 8),
               Text('${(_progress * 100).round()} %'),
-              TextButton(onPressed: () => _task?.cancel(), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => _task?.cancel(),
+                child: const Text('Cancel'),
+              ),
             ] else
-              FilledButton(key: const Key('compress'), onPressed: _compress, child: const Text('Compress')),
+              FilledButton(
+                key: const Key('compress'),
+                onPressed: _compress,
+                child: const Text('Compress'),
+              ),
           ],
-          if (_error != null) Padding(padding: const EdgeInsets.all(8), child: Text(_error!)),
+          if (_error != null)
+            Padding(padding: const EdgeInsets.all(8), child: Text(_error!)),
           if (result != null && source != null) ...[
             _InfoCard(title: 'Result', info: result),
             Text(
@@ -168,13 +200,17 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mb = (info.fileSize / 1e6).toStringAsFixed(2);
-    final mbps = info.bitrate == null ? '?' : (info.bitrate! / 1e6).toStringAsFixed(1);
+    final mbps = info.bitrate == null
+        ? '?'
+        : (info.bitrate! / 1e6).toStringAsFixed(1);
     return Card(
       child: ListTile(
         title: Text(title),
-        subtitle: Text('${info.width}x${info.height}, ${info.frameRate?.toStringAsFixed(0) ?? '?'} fps, '
-            '${(info.duration.inMilliseconds / 1000).toStringAsFixed(1)} s, $mb MB, $mbps Mbps, '
-            '${info.videoMimeType ?? '?'}, ${info.hasAudio ? 'audio' : 'no audio'}'),
+        subtitle: Text(
+          '${info.width}x${info.height}, ${info.frameRate?.toStringAsFixed(0) ?? '?'} fps, '
+          '${(info.duration.inMilliseconds / 1000).toStringAsFixed(1)} s, $mb MB, $mbps Mbps, '
+          '${info.videoMimeType ?? '?'}, ${info.hasAudio ? 'audio' : 'no audio'}',
+        ),
       ),
     );
   }

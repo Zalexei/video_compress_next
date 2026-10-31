@@ -18,6 +18,7 @@ class VideoInfo {
     this.author,
   });
 
+  /// Converts the platform's answer.
   factory VideoInfo.fromNative(NativeMediaInfo info) => VideoInfo(
         path: info.path,
         width: info.width,
@@ -44,11 +45,13 @@ class VideoInfo {
   /// Rotation stored in the file, in degrees: 0, 90, 180 or 270.
   final int rotation;
 
+  /// Length of the video.
   final Duration duration;
 
   /// Bytes.
   final int fileSize;
 
+  /// Whether the file has an audio track.
   final bool hasAudio;
 
   /// Bits per second of the whole file, video and audio, if the file says.
@@ -60,7 +63,10 @@ class VideoInfo {
   /// For example `video/avc` or `video/hevc`.
   final String? videoMimeType;
 
+  /// The title from the file's metadata, if any.
   final String? title;
+
+  /// The author from the file's metadata, if any.
   final String? author;
 
   @override

@@ -51,6 +51,7 @@ class CompressOptions {
   /// capped at 24 stays 30. iOS keeps to the cap exactly.
   final int? maxFrameRate;
 
+  /// Keeps the sound, re-encoded to AAC. False writes a silent video.
   final bool includeAudio;
 
   /// Where the output starts in the source. Null starts at the beginning.
@@ -59,6 +60,7 @@ class CompressOptions {
   /// Where the output ends in the source. Null runs to the end.
   final Duration? trimEnd;
 
+  /// Codec of the output video; see [VideoCodec].
   final VideoCodec codec;
 
   /// Deletes the source file after a successful compression. Only works for
@@ -83,7 +85,8 @@ class CompressOptions {
     bool? deleteOrigin,
     Object? outputPath = _unchanged,
   }) {
-    T? pick<T>(Object? value, T? current) => identical(value, _unchanged) ? current : value as T?;
+    T? pick<T>(Object? value, T? current) =>
+        identical(value, _unchanged) ? current : value as T?;
     return CompressOptions(
       maxShortSide: pick(maxShortSide, this.maxShortSide),
       maxLongSide: pick(maxLongSide, this.maxLongSide),

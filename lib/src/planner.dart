@@ -35,7 +35,8 @@ class EncodePlan {
       other.maxFrameRate == maxFrameRate;
 
   @override
-  int get hashCode => Object.hash(width, height, videoBitrate, fallbackVideoBitrate, maxFrameRate);
+  int get hashCode => Object.hash(
+      width, height, videoBitrate, fallbackVideoBitrate, maxFrameRate);
 
   @override
   String toString() =>
@@ -46,6 +47,8 @@ class EncodePlan {
 /// Bits per pixel per frame: about 2.8 Mbps for 720p at 30 fps in H.264,
 /// which looks clean on a phone. HEVC needs about a third less.
 const double h264BitsPerPixel = 0.1;
+
+/// [h264BitsPerPixel] for HEVC.
 const double hevcBitsPerPixel = 0.065;
 
 /// Below this the picture falls apart whatever the size.
@@ -60,14 +63,17 @@ EncodePlan planEncode(VideoInfo source, CompressOptions options) {
   // A frame drop effect only when it would drop something. With an unknown
   // frame rate the cap is passed on: dropping keeps every frame of a slower
   // video, and a faster one must not slip through.
-  final dropFrames = cap != null && (sourceFps == null || sourceFps > cap + 0.5);
-  final outputFps = math.min(sourceFps ?? 30.0, cap?.toDouble() ?? double.infinity);
+  final dropFrames =
+      cap != null && (sourceFps == null || sourceFps > cap + 0.5);
+  final outputFps =
+      math.min(sourceFps ?? 30.0, cap?.toDouble() ?? double.infinity);
   final pixels = (size?.$1 ?? source.width) * (size?.$2 ?? source.height);
 
   int? autoBitrate(double bitsPerPixel) {
     // Without a known picture size the encoder's own choice beats a guess.
     if (pixels <= 0) return null;
-    var bitrate = math.max(minVideoBitrate, (bitsPerPixel * pixels * outputFps).round());
+    var bitrate =
+        math.max(minVideoBitrate, (bitsPerPixel * pixels * outputFps).round());
     final sourceBitrate = source.bitrate;
     if (sourceBitrate != null && sourceBitrate > 0) {
       bitrate = math.min(bitrate, sourceBitrate);
@@ -79,8 +85,10 @@ EncodePlan planEncode(VideoInfo source, CompressOptions options) {
   return EncodePlan(
     width: size?.$1,
     height: size?.$2,
-    videoBitrate: options.videoBitrate ?? autoBitrate(hevc ? hevcBitsPerPixel : h264BitsPerPixel),
-    fallbackVideoBitrate: hevc ? options.videoBitrate ?? autoBitrate(h264BitsPerPixel) : null,
+    videoBitrate: options.videoBitrate ??
+        autoBitrate(hevc ? hevcBitsPerPixel : h264BitsPerPixel),
+    fallbackVideoBitrate:
+        hevc ? options.videoBitrate ?? autoBitrate(h264BitsPerPixel) : null,
     maxFrameRate: dropFrames ? cap : null,
   );
 }
@@ -103,8 +111,12 @@ EncodePlan planEncode(VideoInfo source, CompressOptions options) {
   int fit(int side, int original) {
     final isShort = original == shortSide;
     final isLong = original == longSide;
-    if (isShort && maxShort != null && side > maxShort) side = math.max(2, maxShort ~/ 2 * 2);
-    if (isLong && maxLong != null && side > maxLong) side = math.max(2, maxLong ~/ 2 * 2);
+    if (isShort && maxShort != null && side > maxShort) {
+      side = math.max(2, maxShort ~/ 2 * 2);
+    }
+    if (isLong && maxLong != null && side > maxLong) {
+      side = math.max(2, maxLong ~/ 2 * 2);
+    }
     return side;
   }
 

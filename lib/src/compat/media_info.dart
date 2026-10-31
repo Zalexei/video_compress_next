@@ -5,6 +5,7 @@ import '../video_info.dart';
 
 /// The result type of `video_compress`, with the same fields and JSON keys.
 class MediaInfo {
+  /// Creates the info with the given fields.
   MediaInfo({
     required this.path,
     this.title,
@@ -18,6 +19,7 @@ class MediaInfo {
     this.file,
   });
 
+  /// Reads the JSON that [toJson] writes.
   MediaInfo.fromJson(Map<String, dynamic> json) {
     path = json['path'] as String?;
     title = json['title'] as String?;
@@ -31,7 +33,9 @@ class MediaInfo {
     file = File(path!);
   }
 
-  factory MediaInfo.fromVideoInfo(VideoInfo info, {bool? isCancel}) => MediaInfo(
+  /// Converts the info of the new API.
+  factory MediaInfo.fromVideoInfo(VideoInfo info, {bool? isCancel}) =>
+      MediaInfo(
         path: info.path,
         title: info.title ?? '',
         author: info.author ?? '',
@@ -44,8 +48,13 @@ class MediaInfo {
         file: File(info.path),
       );
 
+  /// The video file.
   String? path;
+
+  /// The title from the file's metadata, or empty.
   String? title;
+
+  /// The author from the file's metadata, or empty.
   String? author;
 
   /// Displayed width, after rotation.
@@ -63,9 +72,13 @@ class MediaInfo {
   /// Milliseconds.
   double? duration;
 
+  /// False after a successful compression, null from `getMediaInfo`.
   bool? isCancel;
+
+  /// [path] as a [File].
   File? file;
 
+  /// The same JSON `video_compress` produced.
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
       'path': path,

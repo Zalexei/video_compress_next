@@ -6,12 +6,16 @@ import 'dart:ui';
 /// call [Subscription.unsubscribe] before subscribing again.
 class ObservableBuilder<T> {
   StreamController<T> _observable = StreamController();
+
+  /// True until the first [subscribe].
   bool notSubscribed = true;
 
+  /// Sends [value] to the listener.
   void next(T value) {
     if (!_observable.isClosed) _observable.add(value);
   }
 
+  /// Starts listening; [Subscription.unsubscribe] stops it.
   Subscription subscribe(
     void Function(T event) onData, {
     Function? onError,
@@ -19,7 +23,8 @@ class ObservableBuilder<T> {
     bool? cancelOnError,
   }) {
     notSubscribed = false;
-    _observable.stream.listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    _observable.stream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
     return Subscription(() {
       _observable.close();
       _observable = StreamController();
@@ -27,8 +32,10 @@ class ObservableBuilder<T> {
   }
 }
 
+/// Returned by [ObservableBuilder.subscribe].
 class Subscription {
   const Subscription(this.unsubscribe);
 
+  /// Stops the listener and makes the builder ready for a new one.
   final VoidCallback unsubscribe;
 }

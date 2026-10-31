@@ -30,7 +30,9 @@ class FakeHostApi extends VideoCompressHostApi {
   Future<NativeMediaInfo> getMediaInfo(String path) async {
     await mediaInfoGate?.future;
     final info = files[path] ?? _renamed(path);
-    if (info == null) throw PlatformException(code: 'file_not_found', message: path);
+    if (info == null) {
+      throw PlatformException(code: 'file_not_found', message: path);
+    }
     return info;
   }
 
@@ -58,7 +60,9 @@ class FakeHostApi extends VideoCompressHostApi {
   }
 
   void fail(String taskId, String code) {
-    running.remove(taskId)!.completeError(PlatformException(code: code, message: 'fake $code'));
+    running
+        .remove(taskId)!
+        .completeError(PlatformException(code: code, message: 'fake $code'));
   }
 
   @override
@@ -66,7 +70,8 @@ class FakeHostApi extends VideoCompressHostApi {
     cancelled.add(taskId);
     if (!cancelStopsTask) return;
     final done = running.remove(taskId);
-    done?.completeError(PlatformException(code: 'cancelled', message: 'cancelled'));
+    done?.completeError(
+        PlatformException(code: 'cancelled', message: 'cancelled'));
   }
 
   @override
@@ -110,7 +115,8 @@ NativeMediaInfo videoInfo(
 
 /// Sends a progress update as the native side would.
 Future<void> sendProgress(String taskId, double progress) async {
-  await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+  await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .handlePlatformMessage(
     'dev.flutter.pigeon.video_compress_next.VideoCompressFlutterApi.onProgress',
     const StandardMessageCodec().encodeMessage(<Object?>[taskId, progress]),
     (_) {},

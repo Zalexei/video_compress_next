@@ -21,12 +21,15 @@ CompressTask? _task;
 
 /// The `video_compress` plugin object, on top of [VideoCompressor].
 abstract class IVideoCompress {
+  /// Compression progress from 0 to 100.
   final compressProgress$ = ObservableBuilder<double>();
 
   bool _isCompressing = false;
 
+  /// Whether [Compress.compressVideo] is running.
   bool get isCompressing => _isCompressing;
 
+  /// Sets [isCompressing].
   @protected
   void setProcessingStatus(bool status) {
     _isCompressing = status;
@@ -38,7 +41,8 @@ class _VideoCompressImpl extends IVideoCompress {
 
   static _VideoCompressImpl? _instance;
 
-  static _VideoCompressImpl get instance => _instance ??= _VideoCompressImpl._();
+  static _VideoCompressImpl get instance =>
+      _instance ??= _VideoCompressImpl._();
 
   static void _dispose() {
     _instance = null;
@@ -48,7 +52,11 @@ class _VideoCompressImpl extends IVideoCompress {
 /// The same global as `video_compress`: `VideoCompress.compressVideo(...)`.
 IVideoCompress get VideoCompress => _VideoCompressImpl.instance;
 
+/// The methods of `video_compress`.
 extension Compress on IVideoCompress {
+  /// Drops the plugin object; the next use of `VideoCompress` makes a new
+  /// one with a new [IVideoCompress.compressProgress$]. A running
+  /// compression goes on.
   void dispose() {
     _VideoCompressImpl._dispose();
   }
@@ -92,6 +100,8 @@ extension Compress on IVideoCompress {
     );
   }
 
+  /// The size, length and metadata of the video at [path]. Throws
+  /// [VideoCompressException] if it cannot be read.
   Future<MediaInfo> getMediaInfo(String path) async =>
       MediaInfo.fromVideoInfo(await VideoCompressor.getMediaInfo(path));
 
@@ -121,7 +131,9 @@ extension Compress on IVideoCompress {
     }
 
     final start = startTime == null ? null : Duration(seconds: startTime);
-    final end = duration == null ? null : (start ?? Duration.zero) + Duration(seconds: duration);
+    final end = duration == null
+        ? null
+        : (start ?? Duration.zero) + Duration(seconds: duration);
     final options = quality.options.copyWith(
       deleteOrigin: deleteOrigin,
       includeAudio: includeAudio ?? true,

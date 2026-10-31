@@ -17,9 +17,11 @@ enum VideoCompressError {
   failed,
 }
 
+/// What every call of the plugin throws when it fails.
 class VideoCompressException implements Exception {
   const VideoCompressException(this.error, [this.message]);
 
+  /// Converts an error from the platform side.
   factory VideoCompressException.fromPlatform(PlatformException e) {
     final error = switch (e.code) {
       'file_not_found' => VideoCompressError.fileNotFound,
@@ -35,7 +37,10 @@ class VideoCompressException implements Exception {
     return VideoCompressException(error, message);
   }
 
+  /// Why it failed.
   final VideoCompressError error;
+
+  /// Details for logs, in English.
   final String? message;
 
   @override

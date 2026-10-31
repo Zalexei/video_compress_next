@@ -10,7 +10,9 @@ import 'package:video_compress_next/video_compress.dart' as compat;
 import 'package:video_compress_next/video_compress_next.dart';
 
 Future<String> sample(String name, {String prefix = 'it'}) async {
-  final file = File('${await VideoCompressor.cacheDirectory()}/${prefix}_$name');
+  final file = File(
+    '${await VideoCompressor.cacheDirectory()}/${prefix}_$name',
+  );
   final data = await rootBundle.load('assets/$name');
   await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
   return file.path;
@@ -52,19 +54,27 @@ void main() {
 
     final rotated = await VideoCompressor.getMediaInfo(portrait);
     expect(rotated.rotation % 180, 90);
-    expect((rotated.width, rotated.height), (720, 1280), reason: 'displayed size, after rotation');
+    expect(
+      (rotated.width, rotated.height),
+      (720, 1280),
+      reason: 'displayed size, after rotation',
+    );
   });
 
-  testWidgets('compresses 1080p60 to a smaller, readable 720p30 file', (_) async {
+  testWidgets('compresses 1080p60 to a smaller, readable 720p30 file', (
+    _,
+  ) async {
     final source = await VideoCompressor.getMediaInfo(landscape);
     final watch = Stopwatch()..start();
     final task = VideoCompressor.compress(landscape);
     final progress = <double>[];
     task.progress.listen(progress.add);
     final result = await task.result;
-    debugPrint('MEASURE ${source.fileSize} -> ${result.fileSize} bytes, '
-        '${result.width}x${result.height}, ${result.frameRate?.toStringAsFixed(1)} fps, '
-        '${result.bitrate} bps, ${watch.elapsedMilliseconds} ms, ${progress.length} progress events');
+    debugPrint(
+      'MEASURE ${source.fileSize} -> ${result.fileSize} bytes, '
+      '${result.width}x${result.height}, ${result.frameRate?.toStringAsFixed(1)} fps, '
+      '${result.bitrate} bps, ${watch.elapsedMilliseconds} ms, ${progress.length} progress events',
+    );
 
     expect(File(result.path).existsSync(), isTrue);
     // Hardware encoders overshoot the requested bitrate on this noisy clip
@@ -81,12 +91,18 @@ void main() {
       expect(progress[i], greaterThan(progress[i - 1]));
     }
     // The output decodes: a frame from the middle comes back as a 1280x720 JPEG.
-    final frame = await VideoCompressor.getThumbnail(result.path, position: const Duration(milliseconds: 1000));
+    final frame = await VideoCompressor.getThumbnail(
+      result.path,
+      position: const Duration(milliseconds: 1000),
+    );
     expect(await jpegSize(frame), (1280, 720));
   });
 
   testWidgets('keeps a rotated portrait video portrait', (_) async {
-    final result = await VideoCompressor.compress(portrait, options: const CompressOptions(maxShortSide: 480)).result;
+    final result = await VideoCompressor.compress(
+      portrait,
+      options: const CompressOptions(maxShortSide: 480),
+    ).result;
     expect((result.width, result.height), (480, 854));
     final frame = await VideoCompressor.getThumbnail(result.path);
     final (w, h) = await jpegSize(frame);
@@ -120,10 +136,19 @@ void main() {
 
   testWidgets('cancel right after the start stops cleanly', (_) async {
     final out = '${await VideoCompressor.cacheDirectory()}/cancelled_early.mp4';
-    final task = VideoCompressor.compress(landscape, options: CompressOptions(outputPath: out));
+    final task = VideoCompressor.compress(
+      landscape,
+      options: CompressOptions(outputPath: out),
+    );
     final cancelled = expectLater(
       task.result,
-      throwsA(isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.cancelled)),
+      throwsA(
+        isA<VideoCompressException>().having(
+          (e) => e.error,
+          'error',
+          VideoCompressError.cancelled,
+        ),
+      ),
     );
     await task.cancel();
     await cancelled;
@@ -131,34 +156,64 @@ void main() {
     expect(File('$out.part.mp4').existsSync(), isFalse);
   });
 
-  testWidgets('cancel during the work either stops it or comes too late, never half-way', (_) async {
-    final out = '${await VideoCompressor.cacheDirectory()}/cancelled_mid.mp4';
-    final task = VideoCompressor.compress(
-      landscape,
-      options: CompressOptions(maxShortSide: null, maxFrameRate: null, outputPath: out),
-    );
-    final outcome = task.result.then<Object>((info) => info, onError: (Object e) => e);
-    // On a fast device the task may finish before any progress event.
-    await task.progress.first.catchError((_) => 1.0, test: (e) => e is StateError);
-    await task.cancel();
-    final result = await outcome;
-    if (result is VideoInfo) {
-      expect(File(out).existsSync(), isTrue);
-    } else {
-      expect(result, isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.cancelled));
-      expect(File(out).existsSync(), isFalse);
-    }
-    expect(File('$out.part.mp4').existsSync(), isFalse);
-  });
+  testWidgets(
+    'cancel during the work either stops it or comes too late, never half-way',
+    (_) async {
+      final out = '${await VideoCompressor.cacheDirectory()}/cancelled_mid.mp4';
+      final task = VideoCompressor.compress(
+        landscape,
+        options: CompressOptions(
+          maxShortSide: null,
+          maxFrameRate: null,
+          outputPath: out,
+        ),
+      );
+      final outcome = task.result.then<Object>(
+        (info) => info,
+        onError: (Object e) => e,
+      );
+      // On a fast device the task may finish before any progress event.
+      await task.progress.first.catchError(
+        (_) => 1.0,
+        test: (e) => e is StateError,
+      );
+      await task.cancel();
+      final result = await outcome;
+      if (result is VideoInfo) {
+        expect(File(out).existsSync(), isTrue);
+      } else {
+        expect(
+          result,
+          isA<VideoCompressException>().having(
+            (e) => e.error,
+            'error',
+            VideoCompressError.cancelled,
+          ),
+        );
+        expect(File(out).existsSync(), isFalse);
+      }
+      expect(File('$out.part.mp4').existsSync(), isFalse);
+    },
+  );
 
-  testWidgets('a frame rate cap that does not divide the source (30 to 24 fps)', (_) async {
-    final result = await VideoCompressor.compress(portrait, options: const CompressOptions(maxFrameRate: 24)).result;
+  testWidgets('a frame rate cap that does not divide the source (30 to 24 fps)', (
+    _,
+  ) async {
+    final result = await VideoCompressor.compress(
+      portrait,
+      options: const CompressOptions(maxFrameRate: 24),
+    ).result;
     // Media3 drops frames only from about 1.5 times the cap (see maxFrameRate).
-    expect(result.frameRate, Platform.isIOS ? closeTo(24, 1.5) : lessThanOrEqualTo(30.5));
+    expect(
+      result.frameRate,
+      Platform.isIOS ? closeTo(24, 1.5) : lessThanOrEqualTo(30.5),
+    );
     expect(result.duration.inMilliseconds, closeTo(1500, 150));
   });
 
-  testWidgets('a voice recording with 16 kHz mono audio keeps its sound', (_) async {
+  testWidgets('a voice recording with 16 kHz mono audio keeps its sound', (
+    _,
+  ) async {
     final source = await VideoCompressor.getMediaInfo(voice);
     expect(source.hasAudio, isTrue);
     final result = await VideoCompressor.compress(voice).result;
@@ -169,14 +224,22 @@ void main() {
   testWidgets('a missing file fails with fileNotFound', (_) async {
     await expectLater(
       VideoCompressor.compress('/no/such/video.mp4').result,
-      throwsA(isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.fileNotFound)),
+      throwsA(
+        isA<VideoCompressException>().having(
+          (e) => e.error,
+          'error',
+          VideoCompressError.fileNotFound,
+        ),
+      ),
     );
   });
 
   testWidgets('video_compress API works the same way', (_) async {
     final copy = await sample('landscape.mp4', prefix: 'compat');
     final progress = <double>[];
-    final subscription = compat.VideoCompress.compressProgress$.subscribe(progress.add);
+    final subscription = compat.VideoCompress.compressProgress$.subscribe(
+      progress.add,
+    );
     final info = await compat.VideoCompress.compressVideo(
       copy,
       quality: compat.VideoQuality.LowQuality,
@@ -193,12 +256,18 @@ void main() {
     expect(progress, isNotEmpty);
     expect(progress.last, 100.0);
 
-    final thumb = await compat.VideoCompress.getFileThumbnail(info.path!, quality: 80);
+    final thumb = await compat.VideoCompress.getFileThumbnail(
+      info.path!,
+      quality: 80,
+    );
     expect(thumb.existsSync(), isTrue);
     expect(await jpegSize(thumb.readAsBytesSync()), (512, 288));
 
     final media = await compat.VideoCompress.getMediaInfo(landscape);
-    expect((media.width, media.height, media.filesize), (1920, 1080, File(landscape).lengthSync()));
+    expect(
+      (media.width, media.height, media.filesize),
+      (1920, 1080, File(landscape).lengthSync()),
+    );
   });
 
   testWidgets('compresses a real camera video (REAL_VIDEO)', (_) async {
@@ -206,12 +275,22 @@ void main() {
     debugPrint('REAL source $source');
     for (final codec in VideoCodec.values) {
       final watch = Stopwatch()..start();
-      final result = await VideoCompressor.compress(realVideo, options: CompressOptions(codec: codec)).result;
-      debugPrint('REAL ${codec.name} in ${watch.elapsedMilliseconds} ms: $result');
+      final result = await VideoCompressor.compress(
+        realVideo,
+        options: CompressOptions(codec: codec),
+      ).result;
+      debugPrint(
+        'REAL ${codec.name} in ${watch.elapsedMilliseconds} ms: $result',
+      );
       expect(result.fileSize, lessThan(source.fileSize));
       expect(result.width < result.height, source.width < source.height);
-      expect(result.duration.inMilliseconds, closeTo(source.duration.inMilliseconds, 300));
-      final (w, h) = await jpegSize(await VideoCompressor.getThumbnail(result.path, maxSide: 512));
+      expect(
+        result.duration.inMilliseconds,
+        closeTo(source.duration.inMilliseconds, 300),
+      );
+      final (w, h) = await jpegSize(
+        await VideoCompressor.getThumbnail(result.path, maxSide: 512),
+      );
       expect(w < h, source.width < source.height);
       await File(result.path).delete();
     }
@@ -220,6 +299,9 @@ void main() {
   // Last: it removes the samples the other tests use.
   testWidgets('deleteAllCache empties the cache folder', (_) async {
     expect(await compat.VideoCompress.deleteAllCache(), isTrue);
-    expect(Directory(await VideoCompressor.cacheDirectory()).listSync(), isEmpty);
+    expect(
+      Directory(await VideoCompressor.cacheDirectory()).listSync(),
+      isEmpty,
+    );
   });
 }

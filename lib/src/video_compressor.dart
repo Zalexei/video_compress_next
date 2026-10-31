@@ -95,8 +95,10 @@ abstract final class VideoCompressor {
     int? maxSide,
     String? outputPath,
   }) async {
-    final bytes = await getThumbnail(path, position: position, quality: quality, maxSide: maxSide);
-    final file = File(outputPath ?? '${await cacheDirectory()}/THUMB_${_stamp()}.jpg');
+    final bytes = await getThumbnail(path,
+        position: position, quality: quality, maxSide: maxSide);
+    final file =
+        File(outputPath ?? '${await cacheDirectory()}/THUMB_${_stamp()}.jpg');
     return _guard(() => file.writeAsBytes(bytes, flush: true));
   }
 
@@ -107,7 +109,10 @@ abstract final class VideoCompressor {
   /// compressions are writing. Returns false if some could not be deleted.
   static Future<bool> deleteAllCache() async {
     final dir = Directory(await cacheDirectory());
-    final busy = {for (final task in _tasks.values) if (task.partPath != null) task.partPath!};
+    final busy = {
+      for (final task in _tasks.values)
+        if (task.partPath != null) task.partPath!
+    };
     var ok = true;
     await _guard(() async {
       await for (final entry in dir.list()) {
@@ -132,10 +137,11 @@ abstract final class VideoCompressor {
       return await _guard(() async {
         final source = await getMediaInfo(path);
         final plan = planEncode(source, options);
-        final outputPath = options.outputPath ?? '${await cacheDirectory()}/VID_${_stamp()}.mp4';
+        final outputPath = options.outputPath ??
+            '${await cacheDirectory()}/VID_${_stamp()}.mp4';
         if (_samePath(path, outputPath)) {
-          throw VideoCompressException(
-              VideoCompressError.failed, 'The output path is the input file: $outputPath');
+          throw VideoCompressException(VideoCompressError.failed,
+              'The output path is the input file: $outputPath');
         }
         // The platform writes next to the output and the file is renamed on
         // success, so a failed or cancelled compression leaves whatever is at
@@ -175,7 +181,8 @@ abstract final class VideoCompressor {
     } on VideoCompressException catch (e) {
       // After cancel() any failure is reported as the cancellation it caused.
       if (state.cancelled && e.error != VideoCompressError.cancelled) {
-        throw const VideoCompressException(VideoCompressError.cancelled, 'The compression was cancelled.');
+        throw const VideoCompressException(
+            VideoCompressError.cancelled, 'The compression was cancelled.');
       }
       rethrow;
     } finally {
@@ -190,19 +197,24 @@ abstract final class VideoCompressor {
 
   /// Fails, instead of handing back the file, if the platform reported
   /// success but wrote something unreadable or clearly shorter than asked.
-  static Future<void> _checkOutput(VideoInfo source, CompressOptions options, String path) async {
+  static Future<void> _checkOutput(
+      VideoInfo source, CompressOptions options, String path) async {
     final VideoInfo written;
     try {
       written = await getMediaInfo(path);
     } on VideoCompressException catch (e) {
-      throw VideoCompressException(VideoCompressError.failed, 'The compressed file cannot be read: ${e.message}');
+      throw VideoCompressException(VideoCompressError.failed,
+          'The compressed file cannot be read: ${e.message}');
     }
     final total = source.duration;
     if (total <= Duration.zero) return;
-    final end = options.trimEnd == null || options.trimEnd! > total ? total : options.trimEnd!;
+    final end = options.trimEnd == null || options.trimEnd! > total
+        ? total
+        : options.trimEnd!;
     final expected = end - (options.trimStart ?? Duration.zero);
     if (expected <= Duration.zero) return;
-    final slack = Duration(milliseconds: math.max(1000, expected.inMilliseconds ~/ 10));
+    final slack =
+        Duration(milliseconds: math.max(1000, expected.inMilliseconds ~/ 10));
     if (written.duration < expected - slack) {
       throw VideoCompressException(
         VideoCompressError.failed,
@@ -238,7 +250,8 @@ abstract final class VideoCompressor {
       final a = File(_filePath(input)).absolute;
       final b = File(_filePath(output)).absolute;
       if (a.path == b.path) return true;
-      return b.existsSync() && a.resolveSymbolicLinksSync() == b.resolveSymbolicLinksSync();
+      return b.existsSync() &&
+          a.resolveSymbolicLinksSync() == b.resolveSymbolicLinksSync();
     } on Object {
       return false;
     }
@@ -266,7 +279,8 @@ abstract final class VideoCompressor {
     }
   }
 
-  static String _stamp() => '${DateTime.now().millisecondsSinceEpoch}_${++_lastId}';
+  static String _stamp() =>
+      '${DateTime.now().millisecondsSinceEpoch}_${++_lastId}';
 }
 
 class _TaskState {
@@ -280,7 +294,8 @@ class _TaskState {
 
   void throwIfCancelled() {
     if (cancelled) {
-      throw const VideoCompressException(VideoCompressError.cancelled, 'The compression was cancelled.');
+      throw const VideoCompressException(
+          VideoCompressError.cancelled, 'The compression was cancelled.');
     }
   }
 
