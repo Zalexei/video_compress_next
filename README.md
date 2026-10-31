@@ -1,5 +1,6 @@
 # video_compress_next
 
+[![pub package](https://img.shields.io/pub/v/video_compress_next.svg)](https://pub.dev/packages/video_compress_next)
 [![CI](https://github.com/Zalexei/video_compress_next/actions/workflows/ci.yml/badge.svg)](https://github.com/Zalexei/video_compress_next/actions/workflows/ci.yml)
 
 Video compression for Flutter on the phone's own hardware encoders:
