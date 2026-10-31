@@ -152,8 +152,16 @@ cancel, a missing file, and the `video_compress` API):
   in 1.1 s.
 - iOS: iPhone 17 Pro simulator, iOS 26.1. The same sample became 0.70 MB in
   0.5 s.
+- Android on a real phone: Xiaomi 14T Pro (MediaTek Dimensity 9300+, Android
+  16), hardware encoders. A 16-second portrait camera video (1080x1920,
+  60 fps, HEVC, 41.5 MB) became 7.6 MB in H.264 at 720p30 in 3.5 s, and
+  5.3 MB in HEVC in 3.2 s, the right way up.
 
-Not tested yet: real phones (emulators use software encoders), HDR sources
+Hardware encoders treat the bitrate as a target, not a limit: on the Xiaomi
+the camera video came out about a third above it, and a noise-heavy test clip
+almost twice. Emulators and simulators keep to it closely.
+
+Not tested yet: iPhones, other Android chips (Qualcomm, Exynos, Tensor), HDR sources
 (Android tone-maps them to SDR with OpenGL; on iOS HDR colors may come out
 wrong), and building with Flutter 3.27 itself (the Dart code is checked at the
 3.6 language level and the Android side builds with `compileSdk` 35).
@@ -163,6 +171,7 @@ wrong), and building with Flutter 3.27 itself (the Dart code is checked at the
 ```bash
 flutter test                                    # Dart unit tests
 cd example && flutter test integration_test -d <device>
+# Add --dart-define=REAL_VIDEO=<path on the device> to also compress a real video.
 dart run pigeon --input pigeons/messages.dart   # after editing the contract
 ```
 

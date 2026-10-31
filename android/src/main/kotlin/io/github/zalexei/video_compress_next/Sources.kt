@@ -17,6 +17,8 @@ internal object Sources {
         if (uri.scheme == "file") {
             val file = File(uri.path!!)
             if (!file.exists()) throw FlutterError("file_not_found", "No file at $path")
+            // A file another user created (adb push, another app) can exist and still be closed to us.
+            if (!file.canRead()) throw FlutterError("file_not_found", "No permission to read $path")
             return file.length()
         }
         return try {
