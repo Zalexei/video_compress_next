@@ -30,6 +30,9 @@ dependency and the import (see [below](#moving-from-video_compress)).
 | Android | `minSdk` 23, `compileSdk` 35 | Media3 Transformer 1.9.4 by default |
 | iOS | 13.0 | `AVAssetReader` / `AVAssetWriter` |
 
+On iOS the plugin builds with Swift Package Manager, which Flutter uses by
+default from 3.44, and with CocoaPods.
+
 On Android the plugin works with built-in Kotlin (AGP 9 with
 `android.builtInKotlin=true`, Flutter 3.47+) and does not appear in Flutter's
 "plugins that apply Kotlin Gradle Plugin" warning. With AGP 8 or built-in
@@ -169,7 +172,7 @@ for per-task progress and cancel, typed errors, HEVC and exact sizes.
 
 ## Status
 
-Version 0.1.0, the first release. Tested by the integration tests in
+Tested by the integration tests in
 `example/integration_test` (media info, 1080p60 to 720p30, a rotated portrait
 video, trim, audio removal, HEVC, cancel right after the start and during the
 work, a 30 to 24 fps cap, a voice recording with 16 kHz mono sound, a missing
@@ -178,8 +181,9 @@ file, and the `video_compress` API):
 - Android: Pixel 9a emulator, Android API 37, with Media3 1.9.4 and with
   1.11.1. The 2-second 1080p60 sample of 1.61 MB became 0.80 MB at 720p30
   in 1.1 s.
-- iOS: iPhone 17 Pro simulator, iOS 26.1. The same sample became 0.70 MB in
-  0.5 s.
+- iOS: iPhone 17 Pro simulator, iOS 26.1, with the plugin built through
+  Swift Package Manager (Flutter 3.35 and 3.47.2) and through CocoaPods. The
+  same sample became 0.70 MB in 0.5 s.
 - Android on a real phone: Xiaomi 14T Pro (MediaTek Dimensity 9300+, Android
   16), hardware encoders. A 16-second portrait camera video (1080x1920,
   60 fps, HEVC, 41.5 MB) became 7.6 MB in H.264 at 720p30 in 3.5 s, and
@@ -191,7 +195,8 @@ almost twice. Emulators and simulators keep to it closely.
 
 With the oldest supported Flutter, 3.27.4, the unit tests pass and a new app
 with the plugin builds for Android (AGP 8.1, Kotlin 1.8.22); with Flutter
-3.47.2 it builds with AGP 9.1 and Kotlin 2.4. CI checks both on every push.
+3.47.2 it builds with AGP 9.1 and Kotlin 2.4. CI checks both on every push
+and builds the iOS example with Swift Package Manager and with CocoaPods.
 
 Not tested yet: iPhones, other Android chips (Qualcomm, Exynos, Tensor), HDR
 sources (Android tone-maps them to SDR with OpenGL; on iOS HDR colors may come
@@ -216,7 +221,8 @@ dart run pigeon --input pigeons/messages.dart && dart format lib   # after editi
 
 The dev tools (Pigeon 26.0.1) work from Dart 3.6, the package's minimum, up.
 The example app itself needs Dart 3.9 (Flutter 3.35) and `benchmark/` needs
-Flutter 3.47.2.
+Flutter 3.47.2. With Swift Package Manager the example app builds only from a
+clone whose folder is named `video_compress_next`.
 
 ## License
 

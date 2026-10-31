@@ -1,3 +1,10 @@
+## 0.1.1
+
+* iOS: Swift Package Manager support, which Flutter uses by default from
+  3.44. CocoaPods still works.
+* The Example tab on pub.dev shows the usage snippets (`example/example.md`)
+  instead of the whole example app.
+
 ## 0.1.0
 
 * First release.

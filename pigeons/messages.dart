@@ -9,7 +9,7 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/src/main/kotlin/io/github/zalexei/video_compress_next/Messages.g.kt',
     kotlinOptions: KotlinOptions(package: 'io.github.zalexei.video_compress_next'),
-    swiftOut: 'ios/Classes/Messages.g.swift',
+    swiftOut: 'ios/video_compress_next/Sources/video_compress_next/Messages.g.swift',
     copyrightHeader: 'pigeons/copyright.txt',
   ),
 )

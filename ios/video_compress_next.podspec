@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'video_compress_next'
-  s.version          = '0.1.0'
+  s.version          = '0.1.1'
   s.summary          = 'Drop-in replacement for video_compress: hardware video compression with AndroidX Media3 Transformer and AVFoundation, no FFmpeg.'
   s.description      = <<-DESC
 Drop-in replacement for video_compress: hardware video compression with AndroidX Media3 Transformer and AVFoundation, no FFmpeg.
@@ -13,7 +13,7 @@ Drop-in replacement for video_compress: hardware video compression with AndroidX
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Alexei Zalogin' => '9594147+Zalexei@users.noreply.github.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'video_compress_next/Sources/video_compress_next/**/*.swift'
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
   s.frameworks = 'AVFoundation', 'CoreMedia'
@@ -26,5 +26,5 @@ Drop-in replacement for video_compress: hardware video compression with AndroidX
   # required reason APIs, update the PrivacyInfo.xcprivacy file to describe your
   # plugin's privacy impact, and then uncomment this line. For more information,
   # see https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-  s.resource_bundles = {'video_compress_next_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
+  s.resource_bundles = {'video_compress_next_privacy' => ['video_compress_next/Sources/video_compress_next/PrivacyInfo.xcprivacy']}
 end

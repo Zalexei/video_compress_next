@@ -1,6 +1,6 @@
 name: video_compress_next
 description: "Drop-in replacement for video_compress: hardware video compression with AndroidX Media3 Transformer and AVFoundation, no FFmpeg."
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/Zalexei/video_compress_next
 issue_tracker: https://github.com/Zalexei/video_compress_next/issues
 topics: [video, compression, media3, avfoundation, video-compress]

@@ -63,13 +63,31 @@ jobs:
           flutter build apk --debug
 
   ios:
-    name: iOS build of the example
+    name: iOS build of the example (${{ matrix.deps }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        deps: [swift-package-manager, cocoapods]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+      - if: matrix.deps == 'cocoapods'
+        run: flutter config --no-enable-swift-package-manager
       - run: flutter build ios --simulator --debug
         working-directory: example
+      - name: Check that the plugin came in through ${{ matrix.deps }}
+        working-directory: example/ios
+        run: |
+          # CocoaPods builds the plugin as a framework, Swift Package Manager
+          # links it into the app.
+          framework=../build/ios/iphonesimulator/Runner.app/Frameworks/video_compress_next.framework
+          if [ "${{ matrix.deps }}" = swift-package-manager ]; then
+            grep -q video_compress_next Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift
+            test ! -e "$framework"
+          else
+            test -d "$framework"
+          fi
