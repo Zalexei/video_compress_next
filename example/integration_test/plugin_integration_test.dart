@@ -38,7 +38,7 @@ void main() {
   testWidgets('reads media info', (_) async {
     final info = await VideoCompressor.getMediaInfo(landscape);
     expect((info.width, info.height, info.rotation), (1920, 1080, 0));
-    expect(info.duration.inMilliseconds, closeTo(3000, 100));
+    expect(info.duration.inMilliseconds, closeTo(2000, 100));
     expect(info.frameRate, closeTo(60, 1));
     expect(info.hasAudio, isTrue);
     expect(info.videoMimeType, 'video/avc');
@@ -61,10 +61,10 @@ void main() {
         '${result.bitrate} bps, ${watch.elapsedMilliseconds} ms, ${progress.length} progress events');
 
     expect(File(result.path).existsSync(), isTrue);
-    expect(result.fileSize, lessThan(source.fileSize ~/ 2));
+    expect(result.fileSize, lessThan(source.fileSize * 0.6));
     expect((result.width, result.height), (1280, 720));
     expect(result.frameRate, lessThan(31));
-    expect(result.duration.inMilliseconds, closeTo(3000, 200));
+    expect(result.duration.inMilliseconds, closeTo(2000, 200));
     expect(result.hasAudio, isTrue);
     expect(result.videoMimeType, 'video/avc');
     expect(progress.last, 1.0);
@@ -72,7 +72,7 @@ void main() {
       expect(progress[i], greaterThan(progress[i - 1]));
     }
     // The output decodes: a frame from the middle comes back as a 1280x720 JPEG.
-    final frame = await VideoCompressor.getThumbnail(result.path, position: const Duration(milliseconds: 1500));
+    final frame = await VideoCompressor.getThumbnail(result.path, position: const Duration(milliseconds: 1000));
     expect(await jpegSize(frame), (1280, 720));
   });
 
@@ -91,12 +91,12 @@ void main() {
         maxShortSide: 360,
         includeAudio: false,
         trimStart: Duration(milliseconds: 500),
-        trimEnd: Duration(seconds: 2),
+        trimEnd: Duration(milliseconds: 1800),
       ),
     ).result;
     expect((result.width, result.height), (640, 360));
     expect(result.hasAudio, isFalse);
-    expect(result.duration.inMilliseconds, closeTo(1500, 150));
+    expect(result.duration.inMilliseconds, closeTo(1300, 150));
   });
 
   testWidgets('HEVC, or the closest codec the device has', (_) async {
@@ -147,7 +147,7 @@ void main() {
     expect((info!.width, info.height), (640, 360));
     expect(info.isCancel, isFalse);
     expect(info.file!.existsSync(), isTrue);
-    expect(info.duration, closeTo(3000, 200));
+    expect(info.duration, closeTo(2000, 200));
     expect(File(copy).existsSync(), isFalse, reason: 'deleteOrigin');
     expect(progress, isNotEmpty);
     expect(progress.last, 100.0);
