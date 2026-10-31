@@ -69,6 +69,10 @@ class NativeCompressRequest {
   /// Bits per second; null lets the encoder choose.
   int? videoBitrate;
 
+  /// Used instead of [videoBitrate] when HEVC was asked for but the device
+  /// has no HEVC encoder and H.264 is used: H.264 needs more bits.
+  int? fallbackVideoBitrate;
+
   /// Frames above this rate are dropped; null keeps all frames.
   int? maxFrameRate;
 

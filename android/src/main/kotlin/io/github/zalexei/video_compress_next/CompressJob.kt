@@ -2,6 +2,7 @@
 package io.github.zalexei.video_compress_next
 
 import android.content.Context
+import android.media.MediaCodecList
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.OptIn
@@ -41,7 +42,9 @@ internal class CompressJob(
 
     fun start() {
         try {
-            Sources.size(context, request.inputPath) // Fails early with file_not_found.
+            // The Dart side has read the input's media info already, so the
+            // input exists; content:// providers can be slow to open, so it
+            // is not opened again here on the main thread.
             output.parentFile?.mkdirs()
             output.delete()
             val transformer = buildTransformer()
@@ -50,7 +53,8 @@ internal class CompressJob(
         } catch (e: FlutterError) {
             finish(Result.failure(e))
             return
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            output.delete()
             finish(Result.failure(FlutterError("failed", e.toString())))
             return
         }
@@ -65,21 +69,29 @@ internal class CompressJob(
     }
 
     private fun buildTransformer(): Transformer {
+        // Without an HEVC encoder the encoder factory would fall back to
+        // H.264 on its own, but at the bitrate planned for HEVC.
+        val hevc = request.codec == NativeVideoCodec.HEVC && hasEncoder(MimeTypes.VIDEO_H265)
+        val bitrate = if (request.codec == NativeVideoCodec.HEVC && !hevc) {
+            request.fallbackVideoBitrate ?: request.videoBitrate
+        } else {
+            request.videoBitrate
+        }
         val videoSettings = VideoEncoderSettings.Builder()
-        request.videoBitrate?.let { videoSettings.setBitrate(it.toInt()) }
+        bitrate?.let { videoSettings.setBitrate(it.toInt()) }
         val encoders = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(videoSettings.build())
             // Lets the encoder lower the size or bitrate it cannot do, instead of failing.
             .setEnableFallback(true)
             .build()
         return Transformer.Builder(context)
-            .setVideoMimeType(
-                if (request.codec == NativeVideoCodec.HEVC) MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264,
-            )
+            .setVideoMimeType(if (hevc) MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .setEncoderFactory(encoders)
             .addListener(object : Transformer.Listener {
+                // Both can still arrive after cancel(); by then the job has answered.
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    if (finished) return
                     onProgress(1.0)
                     finish(Result.success(Unit))
                 }
@@ -89,6 +101,7 @@ internal class CompressJob(
                     exportResult: ExportResult,
                     exportException: ExportException,
                 ) {
+                    if (finished) return
                     output.delete()
                     finish(Result.failure(error(exportException)))
                 }
@@ -156,9 +169,9 @@ internal class CompressJob(
             ExportException.ERROR_CODE_IO_FILE_NOT_FOUND,
             ExportException.ERROR_CODE_IO_NO_PERMISSION -> "file_not_found"
             ExportException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-            ExportException.ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED,
-            ExportException.ERROR_CODE_DECODER_INIT_FAILED,
-            ExportException.ERROR_CODE_ENCODER_INIT_FAILED -> "unsupported"
+            ExportException.ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED -> "unsupported"
+            // Includes codecs that failed to start because the camera or
+            // another app holds them: worth trying again later.
             else -> "failed"
         }
         return FlutterError(code, "${e.errorCodeName}: ${e.message}")
@@ -166,5 +179,10 @@ internal class CompressJob(
 
     private companion object {
         const val PROGRESS_INTERVAL_MS = 200L
+
+        fun hasEncoder(mimeType: String): Boolean =
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                info.isEncoder && info.supportedTypes.any { it.equals(mimeType, ignoreCase = true) }
+            }
     }
 }

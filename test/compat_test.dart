@@ -64,8 +64,9 @@ void main() {
     final info = await future;
     await pumpEventQueue();
 
-    expect(info!.path, request.outputPath);
-    expect(info.file!.path, request.outputPath);
+    final finalPath = request.outputPath.replaceAll('.part.mp4', '');
+    expect(info!.path, finalPath);
+    expect(info.file!.path, finalPath);
     expect(info.isCancel, isFalse);
     expect(info.filesize, 1234);
     expect(info.duration, 10000.0);
@@ -90,6 +91,15 @@ void main() {
     expect(await future, isNull);
     expect(api.cancelled, hasLength(1));
     expect(VideoCompress.isCompressing, isFalse);
+  });
+
+  test('cancelCompression still works after dispose', () async {
+    final future = VideoCompress.compressVideo('/in.mp4');
+    await pumpEventQueue();
+    VideoCompress.dispose();
+    await VideoCompress.cancelCompression();
+    expect(await future, isNull);
+    expect(api.cancelled, hasLength(1));
   });
 
   test('a failed compression returns null like video_compress did', () async {

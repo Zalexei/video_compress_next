@@ -45,6 +45,10 @@ class CompressOptions {
 
   /// Frames above this rate are dropped; a slower video is not sped up.
   /// Null keeps every frame.
+  ///
+  /// On Android, Media3 drops frames only when the source is about 1.5 times
+  /// the cap or more: 60 fps becomes 30 and 50 fps becomes 25, but 30 fps
+  /// capped at 24 stays 30. iOS keeps to the cap exactly.
   final int? maxFrameRate;
 
   final bool includeAudio;
@@ -65,28 +69,34 @@ class CompressOptions {
   /// cache folder, see [VideoCompressor.deleteAllCache].
   final String? outputPath;
 
+  /// A copy with the given fields changed. Passing null for a limit, a trim
+  /// point or the output path removes it: `copyWith(maxFrameRate: null)`.
   CompressOptions copyWith({
-    int? maxShortSide,
-    int? maxLongSide,
-    int? videoBitrate,
-    int? maxFrameRate,
+    Object? maxShortSide = _unchanged,
+    Object? maxLongSide = _unchanged,
+    Object? videoBitrate = _unchanged,
+    Object? maxFrameRate = _unchanged,
     bool? includeAudio,
-    Duration? trimStart,
-    Duration? trimEnd,
+    Object? trimStart = _unchanged,
+    Object? trimEnd = _unchanged,
     VideoCodec? codec,
     bool? deleteOrigin,
-    String? outputPath,
-  }) =>
-      CompressOptions(
-        maxShortSide: maxShortSide ?? this.maxShortSide,
-        maxLongSide: maxLongSide ?? this.maxLongSide,
-        videoBitrate: videoBitrate ?? this.videoBitrate,
-        maxFrameRate: maxFrameRate ?? this.maxFrameRate,
-        includeAudio: includeAudio ?? this.includeAudio,
-        trimStart: trimStart ?? this.trimStart,
-        trimEnd: trimEnd ?? this.trimEnd,
-        codec: codec ?? this.codec,
-        deleteOrigin: deleteOrigin ?? this.deleteOrigin,
-        outputPath: outputPath ?? this.outputPath,
-      );
+    Object? outputPath = _unchanged,
+  }) {
+    T? pick<T>(Object? value, T? current) => identical(value, _unchanged) ? current : value as T?;
+    return CompressOptions(
+      maxShortSide: pick(maxShortSide, this.maxShortSide),
+      maxLongSide: pick(maxLongSide, this.maxLongSide),
+      videoBitrate: pick(videoBitrate, this.videoBitrate),
+      maxFrameRate: pick(maxFrameRate, this.maxFrameRate),
+      includeAudio: includeAudio ?? this.includeAudio,
+      trimStart: pick(trimStart, this.trimStart),
+      trimEnd: pick(trimEnd, this.trimEnd),
+      codec: codec ?? this.codec,
+      deleteOrigin: deleteOrigin ?? this.deleteOrigin,
+      outputPath: pick(outputPath, this.outputPath),
+    );
+  }
+
+  static const Object _unchanged = Object();
 }

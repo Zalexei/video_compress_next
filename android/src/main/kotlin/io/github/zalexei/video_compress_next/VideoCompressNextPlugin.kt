@@ -19,7 +19,8 @@ class VideoCompressNextPlugin : FlutterPlugin, VideoCompressHostApi {
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         flutterApi = VideoCompressFlutterApi(binding.binaryMessenger)
-        background = Executors.newCachedThreadPool()
+        // Two threads: a grid of thumbnails would otherwise start one decoder per call.
+        background = Executors.newFixedThreadPool(2)
         VideoCompressHostApi.setUp(binding.binaryMessenger, this)
     }
 
@@ -82,7 +83,9 @@ class VideoCompressNextPlugin : FlutterPlugin, VideoCompressHostApi {
                 Result.success(work())
             } catch (e: FlutterError) {
                 Result.failure(e)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Throwable, not Exception: an OutOfMemoryError on a 4K frame
+                // would otherwise end the app and leave the Dart call waiting.
                 Result.failure(FlutterError("failed", e.toString()))
             }
             mainHandler.post { callback(result) }

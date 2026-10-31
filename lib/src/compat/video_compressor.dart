@@ -1,6 +1,7 @@
 // Copyright 2026 Alexei Zalogin. Use of this source code is governed by the MIT license in the LICENSE file.
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -14,12 +15,15 @@ import 'video_quality.dart';
 /// Thumbnails of `video_compress` were at most 512 pixels on the longer side.
 const int _thumbnailMaxSide = 512;
 
+/// The running compression. Not per instance: `video_compress` cancelled
+/// natively, so `cancelCompression` worked after `dispose()` too.
+CompressTask? _task;
+
 /// The `video_compress` plugin object, on top of [VideoCompressor].
 abstract class IVideoCompress {
   final compressProgress$ = ObservableBuilder<double>();
 
   bool _isCompressing = false;
-  CompressTask? _task;
 
   bool get isCompressing => _isCompressing;
 
@@ -126,20 +130,33 @@ extension Compress on IVideoCompress {
       trimEnd: end,
     );
 
-    // ignore: invalid_use_of_protected_member
-    setProcessingStatus(true);
-    final task = VideoCompressor.compress(path, options: options);
-    _task = task;
-    final listening = task.progress.listen((p) => compressProgress$.next(p * 100));
+    StreamSubscription<double>? listening;
+    CompressTask? task;
     try {
+      // ignore: invalid_use_of_protected_member
+      setProcessingStatus(true);
+      task = VideoCompressor.compress(path, options: options);
+      _task = task;
+      // Like video_compress, progress goes to the current instance, a new one
+      // after dispose().
+      var sent = 0.0;
+      void send(double percent) {
+        sent = percent;
+        _VideoCompressImpl._instance?.compressProgress$.next(percent);
+      }
+
+      listening = task.progress.listen((p) => send(p * 100));
       final info = await task.result;
+      // video_compress always ended a success with 100; the stream's last
+      // event may still be on its way.
+      if (sent < 100) send(100);
       return MediaInfo.fromVideoInfo(info, isCancel: false);
     } on VideoCompressException catch (e) {
       if (e.error != VideoCompressError.cancelled) _log('compressVideo', e);
       return null;
     } finally {
-      await listening.cancel();
-      _task = null;
+      await listening?.cancel();
+      if (identical(_task, task)) _task = null;
       // ignore: invalid_use_of_protected_member
       setProcessingStatus(false);
     }
@@ -147,7 +164,12 @@ extension Compress on IVideoCompress {
 
   /// Stops the running compression; [compressVideo] then returns null.
   Future<void> cancelCompression() async {
-    await _task?.cancel();
+    try {
+      await _task?.cancel();
+    } on VideoCompressException catch (e) {
+      // video_compress ignored a failed cancel as well.
+      _log('cancelCompression', e);
+    }
   }
 
   /// Deletes the plugin's cache folder contents, compressed videos included.

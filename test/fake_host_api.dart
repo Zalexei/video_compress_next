@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,12 +22,23 @@ class FakeHostApi extends VideoCompressHostApi {
   /// Makes the next getMediaInfo wait for this before answering.
   Completer<void>? mediaInfoGate;
 
+  /// Whether cancel() stops a running task, as it does before the platform
+  /// finishes. False plays a cancel that comes too late.
+  bool cancelStopsTask = true;
+
   @override
   Future<NativeMediaInfo> getMediaInfo(String path) async {
     await mediaInfoGate?.future;
-    final info = files[path];
+    final info = files[path] ?? _renamed(path);
     if (info == null) throw PlatformException(code: 'file_not_found', message: path);
     return info;
+  }
+
+  /// A written output that the plugin has renamed from its .part.mp4 name.
+  NativeMediaInfo? _renamed(String path) {
+    final written = files['$path.part.mp4'];
+    if (written == null || !File(path).existsSync()) return null;
+    return NativeMediaInfo.decode(written.encode())..path = path;
   }
 
   @override
@@ -37,9 +49,10 @@ class FakeHostApi extends VideoCompressHostApi {
     return done.future;
   }
 
-  /// Finishes the compression [taskId] successfully.
+  /// Finishes the compression [taskId] successfully, writing its file.
   void complete(String taskId) {
     final request = requests.firstWhere((r) => r.taskId == taskId);
+    File(request.outputPath).writeAsStringSync('compressed');
     files[request.outputPath] = outputInfo!(request);
     running.remove(taskId)!.complete();
   }
@@ -51,6 +64,7 @@ class FakeHostApi extends VideoCompressHostApi {
   @override
   Future<void> cancel(String taskId) async {
     cancelled.add(taskId);
+    if (!cancelStopsTask) return;
     final done = running.remove(taskId);
     done?.completeError(PlatformException(code: 'cancelled', message: 'cancelled'));
   }

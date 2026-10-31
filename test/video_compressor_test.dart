@@ -56,9 +56,13 @@ void main() {
     expect(request.includeAudio, isFalse);
     expect(request.codec, NativeVideoCodec.hevc);
 
+    expect(request.outputPath, endsWith('.part.mp4'));
     api.complete(task.id);
     final info = await task.result;
-    expect(info.path, request.outputPath);
+    final finalPath = request.outputPath.replaceAll('.part.mp4', '');
+    expect(info.path, finalPath);
+    expect(File(finalPath).existsSync(), isTrue);
+    expect(File(request.outputPath).existsSync(), isFalse, reason: 'the part file is renamed');
     expect(info.fileSize, 3000000);
     expect((info.width, info.height), (1280, 720));
   });
@@ -157,5 +161,98 @@ void main() {
     Directory('${temp.path}/sub').createSync();
     expect(await VideoCompressor.deleteAllCache(), isTrue);
     expect(temp.listSync(), isEmpty);
+  });
+
+  test('an output path that is the input is refused before anything is touched', () async {
+    final source = File('${temp.path}/same.mp4')..writeAsStringSync('video');
+    api.files[source.path] = videoInfo(source.path);
+    for (final output in [source.path, 'file://${source.path}', '${temp.path}/./same.mp4']) {
+      final task = VideoCompressor.compress(source.path, options: CompressOptions(outputPath: output));
+      await expectLater(
+        task.result,
+        throwsA(isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.failed)),
+      );
+    }
+    expect(api.requests, isEmpty);
+    expect(source.readAsStringSync(), 'video');
+  });
+
+  test('a cancel that comes after the platform finished still cancels and keeps the source', () async {
+    final source = File('${temp.path}/keep.mp4')..writeAsStringSync('video');
+    api
+      ..files[source.path] = videoInfo(source.path)
+      ..cancelStopsTask = false;
+    final task = VideoCompressor.compress(source.path, options: const CompressOptions(deleteOrigin: true));
+    final request = await started();
+    final cancelled = expectLater(
+      task.result,
+      throwsA(isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.cancelled)),
+    );
+    await task.cancel();
+    api.complete(task.id);
+    await cancelled;
+    expect(source.existsSync(), isTrue);
+    expect(File(request.outputPath).existsSync(), isFalse);
+    expect(File(request.outputPath.replaceAll('.part.mp4', '')).existsSync(), isFalse);
+  });
+
+  test('a failed compression leaves an existing output file alone', () async {
+    final output = File('${temp.path}/out.mp4')..writeAsStringSync('previous result');
+    final task = VideoCompressor.compress('/in.mp4', options: CompressOptions(outputPath: output.path));
+    await started();
+    api.fail(task.id, 'failed');
+    await expectLater(task.result, throwsA(isA<VideoCompressException>()));
+    expect(output.readAsStringSync(), 'previous result');
+  });
+
+  test('an unreadable or short result fails, is removed and keeps the source', () async {
+    final source = File('${temp.path}/src.mp4')..writeAsStringSync('video');
+    api.files[source.path] = videoInfo(source.path, durationMs: 10000);
+
+    api.outputInfo = (r) => videoInfo(r.outputPath, durationMs: 4000);
+    var task = VideoCompressor.compress(source.path, options: const CompressOptions(deleteOrigin: true));
+    var request = await started();
+    api.complete(task.id);
+    await expectLater(
+      task.result,
+      throwsA(isA<VideoCompressException>().having((e) => e.message, 'message', contains('long instead of'))),
+    );
+    expect(File(request.outputPath).existsSync(), isFalse);
+    expect(source.existsSync(), isTrue);
+
+    // A trimmed result is measured against the trim, not the whole video.
+    api.requests.clear();
+    task = VideoCompressor.compress(source.path,
+        options: const CompressOptions(trimStart: Duration(seconds: 2), trimEnd: Duration(seconds: 6)));
+    await started();
+    api.complete(task.id);
+    expect((await task.result).duration, const Duration(seconds: 4));
+
+    api.requests.clear();
+    task = VideoCompressor.compress(source.path);
+    request = await started();
+    File(request.outputPath).writeAsStringSync('garbage');
+    api.running.remove(task.id)!.complete(); // Success, but nothing readable was registered.
+    await expectLater(
+      task.result,
+      throwsA(isA<VideoCompressException>().having((e) => e.message, 'message', contains('cannot be read'))),
+    );
+    expect(File(request.outputPath).existsSync(), isFalse);
+  });
+
+  test('a paused progress listener does not hold back the result', () async {
+    final task = VideoCompressor.compress('/in.mp4');
+    final subscription = task.progress.listen((_) {})..pause();
+    await started();
+    api.complete(task.id);
+    await task.result.timeout(const Duration(seconds: 1));
+    await subscription.cancel();
+  });
+
+  test('copyWith can remove a limit', () {
+    const options = CompressOptions(maxShortSide: 720, maxFrameRate: 30);
+    final copy = options.copyWith(maxShortSide: null, includeAudio: false);
+    expect((copy.maxShortSide, copy.maxFrameRate, copy.includeAudio), (null, 30, false));
+    expect(options.copyWith().maxShortSide, 720);
   });
 }

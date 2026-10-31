@@ -23,7 +23,6 @@ public class VideoCompressNextPlugin: NSObject, FlutterPlugin, VideoCompressHost
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
     VideoCompressHostApiSetup.setUp(binaryMessenger: registrar.messenger(), api: nil)
     jobs.values.forEach { $0.cancel() }
-    jobs.removeAll()
   }
 
   func getMediaInfo(path: String, completion: @escaping (Result<NativeMediaInfo, Error>) -> Void) {
@@ -36,6 +35,9 @@ public class VideoCompressNextPlugin: NSObject, FlutterPlugin, VideoCompressHost
       completion(.failure(PigeonError(code: "failed", message: "Task \(taskId) is already running", details: nil)))
       return
     }
+    // AVAssetWriter fails as soon as the app is in the background, unless a
+    // background task keeps it running; iOS grants only a short while.
+    var backgroundTask = UIBackgroundTaskIdentifier.invalid
     let job = CompressJob(
       request: request,
       onProgress: { [weak self] progress in
@@ -46,9 +48,22 @@ public class VideoCompressNextPlugin: NSObject, FlutterPlugin, VideoCompressHost
       onDone: { [weak self] result in
         DispatchQueue.main.async {
           self?.jobs[taskId] = nil
+          if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+          }
           completion(result)
         }
       })
+    backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "video_compress_next") {
+      job.stop(
+        PigeonError(
+          code: "failed", message: "The app stayed in the background too long to finish the compression",
+          details: nil))
+      // iOS ends the app if the task is still open when this handler returns.
+      UIApplication.shared.endBackgroundTask(backgroundTask)
+      backgroundTask = .invalid
+    }
     jobs[taskId] = job
     job.start()
   }
@@ -76,7 +91,12 @@ public class VideoCompressNextPlugin: NSObject, FlutterPlugin, VideoCompressHost
     _ completion: @escaping (Result<T, Error>) -> Void, _ work: @escaping () throws -> T
   ) {
     background.async {
-      let result = Result { try work() }
+      // Errors that are not PigeonError would reach Dart with their
+      // description as the code and the type name as the message.
+      let result = Result { try work() }.mapError { error -> Error in
+        error as? PigeonError
+          ?? PigeonError(code: "failed", message: error.localizedDescription, details: nil)
+      }
       DispatchQueue.main.async { completion(result) }
     }
   }

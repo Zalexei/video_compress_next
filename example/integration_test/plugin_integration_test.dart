@@ -32,11 +32,13 @@ void main() {
 
   late String landscape;
   late String portrait;
+  late String voice;
 
   setUpAll(() async {
     await VideoCompressor.deleteAllCache();
     landscape = await sample('landscape.mp4');
     portrait = await sample('portrait.mp4');
+    voice = await sample('voice16k.mp4');
   });
 
   testWidgets('reads media info', (_) async {
@@ -116,20 +118,52 @@ void main() {
     expect(result.fileSize, lessThan(source.fileSize));
   });
 
-  testWidgets('cancel stops the work and removes the partial file', (_) async {
-    final out = '${await VideoCompressor.cacheDirectory()}/cancelled.mp4';
-    final task = VideoCompressor.compress(
-      landscape,
-      options: CompressOptions(maxShortSide: null, maxFrameRate: null, outputPath: out),
-    );
+  testWidgets('cancel right after the start stops cleanly', (_) async {
+    final out = '${await VideoCompressor.cacheDirectory()}/cancelled_early.mp4';
+    final task = VideoCompressor.compress(landscape, options: CompressOptions(outputPath: out));
     final cancelled = expectLater(
       task.result,
       throwsA(isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.cancelled)),
     );
-    await task.progress.firstWhere((p) => p > 0.05);
     await task.cancel();
     await cancelled;
     expect(File(out).existsSync(), isFalse);
+    expect(File('$out.part.mp4').existsSync(), isFalse);
+  });
+
+  testWidgets('cancel during the work either stops it or comes too late, never half-way', (_) async {
+    final out = '${await VideoCompressor.cacheDirectory()}/cancelled_mid.mp4';
+    final task = VideoCompressor.compress(
+      landscape,
+      options: CompressOptions(maxShortSide: null, maxFrameRate: null, outputPath: out),
+    );
+    final outcome = task.result.then<Object>((info) => info, onError: (Object e) => e);
+    // On a fast device the task may finish before any progress event.
+    await task.progress.first.catchError((_) => 1.0, test: (e) => e is StateError);
+    await task.cancel();
+    final result = await outcome;
+    if (result is VideoInfo) {
+      expect(File(out).existsSync(), isTrue);
+    } else {
+      expect(result, isA<VideoCompressException>().having((e) => e.error, 'error', VideoCompressError.cancelled));
+      expect(File(out).existsSync(), isFalse);
+    }
+    expect(File('$out.part.mp4').existsSync(), isFalse);
+  });
+
+  testWidgets('a frame rate cap that does not divide the source (30 to 24 fps)', (_) async {
+    final result = await VideoCompressor.compress(portrait, options: const CompressOptions(maxFrameRate: 24)).result;
+    // Media3 drops frames only from about 1.5 times the cap (see maxFrameRate).
+    expect(result.frameRate, Platform.isIOS ? closeTo(24, 1.5) : lessThanOrEqualTo(30.5));
+    expect(result.duration.inMilliseconds, closeTo(1500, 150));
+  });
+
+  testWidgets('a voice recording with 16 kHz mono audio keeps its sound', (_) async {
+    final source = await VideoCompressor.getMediaInfo(voice);
+    expect(source.hasAudio, isTrue);
+    final result = await VideoCompressor.compress(voice).result;
+    expect(result.hasAudio, isTrue);
+    expect(result.duration.inMilliseconds, closeTo(1000, 150));
   });
 
   testWidgets('a missing file fails with fileNotFound', (_) async {
@@ -165,7 +199,6 @@ void main() {
 
     final media = await compat.VideoCompress.getMediaInfo(landscape);
     expect((media.width, media.height, media.filesize), (1920, 1080, File(landscape).lengthSync()));
-    expect(await compat.VideoCompress.deleteAllCache(), isTrue);
   });
 
   testWidgets('compresses a real camera video (REAL_VIDEO)', (_) async {
@@ -183,4 +216,10 @@ void main() {
       await File(result.path).delete();
     }
   }, skip: realVideo.isEmpty);
+
+  // Last: it removes the samples the other tests use.
+  testWidgets('deleteAllCache empties the cache folder', (_) async {
+    expect(await compat.VideoCompress.deleteAllCache(), isTrue);
+    expect(Directory(await VideoCompressor.cacheDirectory()).listSync(), isEmpty);
+  });
 }

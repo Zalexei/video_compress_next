@@ -27,6 +27,8 @@ internal object Sources {
             } ?: throw FlutterError("file_not_found", "Cannot open $path")
         } catch (e: java.io.FileNotFoundException) {
             throw FlutterError("file_not_found", "Cannot open $path: ${e.message}")
+        } catch (e: SecurityException) {
+            throw FlutterError("file_not_found", "No permission to read $path: ${e.message}")
         }
     }
 }

@@ -27,7 +27,12 @@ class VideoCompressException implements Exception {
       'cancelled' => VideoCompressError.cancelled,
       _ => VideoCompressError.failed,
     };
-    return VideoCompressException(error, e.message);
+    // An unknown code is itself the clue (a channel error, an engine that
+    // went away), so it stays in the message.
+    final message = error == VideoCompressError.failed && e.code != 'failed'
+        ? '${e.code}: ${e.message}${e.details == null ? '' : ' (${e.details})'}'
+        : e.message;
+    return VideoCompressException(error, message);
   }
 
   final VideoCompressError error;

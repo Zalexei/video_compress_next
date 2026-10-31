@@ -1,6 +1,7 @@
 // Copyright 2026 Alexei Zalogin. Use of this source code is governed by the MIT license in the LICENSE file.
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +19,8 @@ class CompressTask {
   final String id;
 
   /// The compressed file's info. Fails with [VideoCompressException], with
-  /// [VideoCompressError.cancelled] after [cancel].
+  /// [VideoCompressError.cancelled] after [cancel]. Await it or handle its
+  /// error: a failure left unhandled reaches the zone's error handler.
   final Future<VideoInfo> result;
 
   final StreamController<double> _progress;
@@ -61,7 +63,7 @@ abstract final class VideoCompressor {
     Future<void> cancel() async {
       if (state.ended) return;
       state.cancelled = true;
-      await _api.cancel(id);
+      await _guard(() => _api.cancel(id));
     }
 
     final result = _run(id, path, options, state);
@@ -95,24 +97,28 @@ abstract final class VideoCompressor {
   }) async {
     final bytes = await getThumbnail(path, position: position, quality: quality, maxSide: maxSide);
     final file = File(outputPath ?? '${await cacheDirectory()}/THUMB_${_stamp()}.jpg');
-    return file.writeAsBytes(bytes, flush: true);
+    return _guard(() => file.writeAsBytes(bytes, flush: true));
   }
 
   /// The folder where compressed videos and thumbnails go by default.
   static Future<String> cacheDirectory() => _guard(_api.cacheDirectory);
 
-  /// Deletes every file in [cacheDirectory]. Returns false if some could not
-  /// be deleted, for example while a compression is writing one.
+  /// Deletes every file in [cacheDirectory] except those that running
+  /// compressions are writing. Returns false if some could not be deleted.
   static Future<bool> deleteAllCache() async {
     final dir = Directory(await cacheDirectory());
+    final busy = {for (final task in _tasks.values) if (task.partPath != null) task.partPath!};
     var ok = true;
-    await for (final entry in dir.list()) {
-      try {
-        await entry.delete(recursive: true);
-      } on FileSystemException {
-        ok = false;
+    await _guard(() async {
+      await for (final entry in dir.list()) {
+        if (busy.contains(entry.path)) continue;
+        try {
+          await entry.delete(recursive: true);
+        } on FileSystemException {
+          ok = false;
+        }
       }
-    }
+    });
     return ok;
   }
 
@@ -127,38 +133,93 @@ abstract final class VideoCompressor {
         final source = await getMediaInfo(path);
         final plan = planEncode(source, options);
         final outputPath = options.outputPath ?? '${await cacheDirectory()}/VID_${_stamp()}.mp4';
-        if (state.cancelled) {
-          throw const VideoCompressException(VideoCompressError.cancelled, 'Cancelled before start');
+        if (_samePath(path, outputPath)) {
+          throw VideoCompressException(
+              VideoCompressError.failed, 'The output path is the input file: $outputPath');
         }
+        // The platform writes next to the output and the file is renamed on
+        // success, so a failed or cancelled compression leaves whatever is at
+        // outputPath alone.
+        final partPath = '$outputPath.part.mp4';
+        state.partPath = partPath;
+        state.throwIfCancelled();
         await _api.compress(NativeCompressRequest(
           taskId: id,
           inputPath: path,
-          outputPath: outputPath,
+          outputPath: partPath,
           width: plan.width,
           height: plan.height,
           videoBitrate: plan.videoBitrate,
+          fallbackVideoBitrate: plan.fallbackVideoBitrate,
           maxFrameRate: plan.maxFrameRate,
           startMs: options.trimStart?.inMilliseconds,
           endMs: options.trimEnd?.inMilliseconds,
           includeAudio: options.includeAudio,
           codec: NativeVideoCodec.values[options.codec.index],
         ));
+        // cancel() may have come after the platform finished.
+        state.throwIfCancelled();
+        await _checkOutput(source, options, partPath);
+        state.throwIfCancelled();
+        await File(partPath).rename(outputPath);
+        state.partPath = null;
         final info = await getMediaInfo(outputPath);
-        if (options.deleteOrigin) await _deleteQuietly(path);
+        if (state.cancelled) {
+          await _deleteIfExists(outputPath);
+          state.throwIfCancelled();
+        }
+        if (options.deleteOrigin) await _deleteOrigin(path);
         state.report(1);
         return info;
       });
+    } on VideoCompressException catch (e) {
+      // After cancel() any failure is reported as the cancellation it caused.
+      if (state.cancelled && e.error != VideoCompressError.cancelled) {
+        throw const VideoCompressException(VideoCompressError.cancelled, 'The compression was cancelled.');
+      }
+      rethrow;
     } finally {
+      final partPath = state.partPath;
+      if (partPath != null) await _deleteIfExists(partPath);
       state.ended = true;
       _tasks.remove(id);
-      await state.progress.close();
+      // Not awaited: the done event waits for paused listeners.
+      unawaited(state.progress.close());
+    }
+  }
+
+  /// Fails, instead of handing back the file, if the platform reported
+  /// success but wrote something unreadable or clearly shorter than asked.
+  static Future<void> _checkOutput(VideoInfo source, CompressOptions options, String path) async {
+    final VideoInfo written;
+    try {
+      written = await getMediaInfo(path);
+    } on VideoCompressException catch (e) {
+      throw VideoCompressException(VideoCompressError.failed, 'The compressed file cannot be read: ${e.message}');
+    }
+    final total = source.duration;
+    if (total <= Duration.zero) return;
+    final end = options.trimEnd == null || options.trimEnd! > total ? total : options.trimEnd!;
+    final expected = end - (options.trimStart ?? Duration.zero);
+    if (expected <= Duration.zero) return;
+    final slack = Duration(milliseconds: math.max(1000, expected.inMilliseconds ~/ 10));
+    if (written.duration < expected - slack) {
+      throw VideoCompressException(
+        VideoCompressError.failed,
+        'The compressed video is ${written.duration} long instead of about $expected',
+      );
     }
   }
 
   static void _listenForProgress() {
     if (_receiving) return;
-    _receiving = true;
-    VideoCompressFlutterApi.setUp(_ProgressReceiver());
+    try {
+      VideoCompressFlutterApi.setUp(_ProgressReceiver());
+      _receiving = true;
+    } on UnsupportedError {
+      // A background isolate cannot receive calls from the platform: the
+      // compression still works, only without progress.
+    }
   }
 
   static Future<T> _guard<T>(Future<T> Function() body) async {
@@ -166,15 +227,42 @@ abstract final class VideoCompressor {
       return await body();
     } on PlatformException catch (e) {
       throw VideoCompressException.fromPlatform(e);
+    } on FileSystemException catch (e) {
+      throw VideoCompressException(VideoCompressError.failed, '$e');
     }
   }
 
-  static Future<void> _deleteQuietly(String path) async {
+  static bool _samePath(String input, String output) {
+    if (input.startsWith('content://')) return false;
+    try {
+      final a = File(_filePath(input)).absolute;
+      final b = File(_filePath(output)).absolute;
+      if (a.path == b.path) return true;
+      return b.existsSync() && a.resolveSymbolicLinksSync() == b.resolveSymbolicLinksSync();
+    } on Object {
+      return false;
+    }
+  }
+
+  static String _filePath(String path) =>
+      path.startsWith('file://') ? Uri.parse(path).toFilePath() : path;
+
+  static Future<void> _deleteOrigin(String path) async {
     if (path.startsWith('content://')) return;
     try {
-      await File(path.startsWith('file://') ? Uri.parse(path).toFilePath() : path).delete();
+      await File(_filePath(path)).delete();
+    } on Object catch (e) {
+      // The compressed file is what matters; say why the source is still there.
+      debugPrint('video_compress_next: could not delete the source $path: $e');
+    }
+  }
+
+  static Future<void> _deleteIfExists(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
     } on FileSystemException {
-      // The compressed file is what matters; a source that is already gone is fine.
+      // Nothing more to do with a leftover partial file.
     }
   }
 
@@ -186,6 +274,15 @@ class _TaskState {
   double _last = 0;
   bool cancelled = false;
   bool ended = false;
+
+  /// The file the platform is writing, until it is renamed.
+  String? partPath;
+
+  void throwIfCancelled() {
+    if (cancelled) {
+      throw const VideoCompressException(VideoCompressError.cancelled, 'The compression was cancelled.');
+    }
+  }
 
   void report(double value) {
     if (ended || progress.isClosed || value <= _last) return;

@@ -48,15 +48,33 @@ void main() {
     expect(planEncode(source(frameRate: 30.2), const CompressOptions()).maxFrameRate, isNull);
   });
 
-  test('unknown frame rate counts as 30 and drops nothing', () {
+  test('unknown frame rate counts as 30 for the bitrate and still sends the cap', () {
     final plan = planEncode(source(frameRate: null), const CompressOptions());
-    expect(plan.maxFrameRate, isNull);
+    expect(plan.maxFrameRate, 30);
     expect(plan.videoBitrate, 2764800);
   });
 
-  test('HEVC needs a lower bitrate', () {
+  test('HEVC needs a lower bitrate and carries the H.264 one for devices without HEVC', () {
     final plan = planEncode(source(), const CompressOptions(codec: VideoCodec.hevc));
     expect(plan.videoBitrate, (0.065 * 1280 * 720 * 30).round());
+    expect(plan.fallbackVideoBitrate, 2764800);
+    expect(planEncode(source(), const CompressOptions()).fallbackVideoBitrate, isNull);
+    final fixed = planEncode(source(), const CompressOptions(codec: VideoCodec.hevc, videoBitrate: 1000000));
+    expect((fixed.videoBitrate, fixed.fallbackVideoBitrate), (1000000, 1000000));
+  });
+
+  test('odd limits are never passed by rounding', () {
+    for (var w = 600; w < 2000; w += 7) {
+      for (final limit in [359, 481, 541, 719]) {
+        final plan = planEncode(source(width: w, height: 1080), CompressOptions(maxShortSide: limit));
+        final short = plan.width == null ? null : (plan.width! < plan.height! ? plan.width : plan.height);
+        if (short != null) expect(short, lessThanOrEqualTo(limit), reason: '${w}x1080 limit $limit');
+      }
+    }
+  });
+
+  test('unknown picture size leaves the bitrate to the encoder', () {
+    expect(planEncode(source(width: 0, height: 0), const CompressOptions()).videoBitrate, isNull);
   });
 
   test('both limits apply and sides stay even', () {

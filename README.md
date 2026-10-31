@@ -88,7 +88,7 @@ await VideoCompressor.deleteAllCache(); // compressed videos and thumbnails
 | `maxShortSide` | 720 | The shorter side is scaled down to this. Never scaled up. |
 | `maxLongSide` | none | The longer side is scaled down to this. |
 | `videoBitrate` | auto | Bits per second. Auto is 0.1 bit per pixel per frame for H.264 (2.8 Mbps for 720p30), 0.065 for HEVC, never above the source's bitrate. |
-| `maxFrameRate` | 30 | Frames above this rate are dropped. A slower video is not sped up. |
+| `maxFrameRate` | 30 | Frames above this rate are dropped. A slower video is not sped up. On Android, Media3 only drops from about 1.5 times the cap: 60 fps becomes 30, but 30 fps capped at 24 stays 30. |
 | `includeAudio` | true | Audio is re-encoded to AAC. |
 | `trimStart`, `trimEnd` | none | Positions in the source. |
 | `codec` | `h264` | `hevc` falls back to H.264 if the device cannot encode it. |
@@ -101,7 +101,19 @@ platforms produce the same size from the same input.
 ### Errors
 
 Everything throws `VideoCompressException` with one of
-`VideoCompressError.fileNotFound`, `unsupported`, `cancelled` or `failed`.
+`VideoCompressError.fileNotFound` (missing or not allowed to read),
+`unsupported` (no video track, or a format the codecs cannot handle),
+`cancelled` or `failed` (anything else, including codecs busy with another
+app: worth trying again). Await `CompressTask.result` or give it an error
+handler, even after `cancel()`: its failure is an error of that future.
+
+The output is written to `<output>.part.mp4` and renamed when it is complete
+and readable, so a failed or cancelled compression never leaves a broken file
+at the output path or touches a file already there. An output path equal to
+the input is refused.
+
+On iOS a compression keeps running in the background only as long as iOS
+allows, usually well under a minute; after that it fails with `failed`.
 
 ## Moving from video_compress
 
@@ -139,6 +151,11 @@ a bug. Both platforms now behave the same:
 | Thumbnails | Android at most 512 px; iOS full size | At most 512 px on both |
 | Cache folder | `video_compress` | `video_compress_next` |
 | `setLogLevel` | Set the native log level | Does nothing |
+| `frameRate` | Android used it only for `HighestQuality`; iOS set exactly that rate, speeding up slower videos by repeating frames | A cap for every quality, on both |
+| Thumbnail `position` | Android read the milliseconds as microseconds (so nearly the first frame); iOS read them as seconds | Milliseconds on both, the frame at that moment |
+| `getMediaInfo` or `getFileThumbnail` on a bad file | A null-check error | `VideoCompressException` |
+| Compressed file names | `VID_<date><hash>.mp4` (Android), `<name><uuid>.mp4` (iOS) | `VID_<ms>_<n>.mp4` |
+| `MediaInfo.path` from `getMediaInfo` | iOS removed `file://` | The path as given |
 | `MediaMetadataRetriever` constants, `IVideoCompress.channel` | Exported | Not included |
 | macOS | Supported | Not yet |
 
@@ -151,7 +168,9 @@ Version 0.1.0, not published yet.
 
 Tested by the integration tests in `example/integration_test` (media info,
 1080p60 to 720p30, a rotated portrait video, trim, audio removal, HEVC,
-cancel, a missing file, and the `video_compress` API):
+cancel right after the start and during the work, a 30 to 24 fps cap, a
+voice recording with 16 kHz mono sound, a missing file, and the
+`video_compress` API):
 
 - Android: Pixel 9a emulator, Android API 37, with Media3 1.9.4 and with
   1.11.1. The 2-second 1080p60 sample of 1.61 MB became 0.80 MB at 720p30
@@ -188,6 +207,10 @@ cd example && flutter test integration_test -d <device>
 # Add --dart-define=REAL_VIDEO=<path on the device> to also compress a real video.
 dart run pigeon --input pigeons/messages.dart   # after editing the contract
 ```
+
+The dev tools (Pigeon 26.0.1) work from Dart 3.6, the package's minimum, up.
+The example app itself needs Dart 3.9 (Flutter 3.35) and `benchmark/` needs
+Flutter 3.47.2.
 
 ## License
 
