@@ -1,5 +1,7 @@
 # video_compress_next
 
+[![CI](https://github.com/Zalexei/video_compress_next/actions/workflows/ci.yml/badge.svg)](https://github.com/Zalexei/video_compress_next/actions/workflows/ci.yml)
+
 Video compression for Flutter on the phone's own hardware encoders:
 **AndroidX Media3 Transformer** on Android and **AVFoundation** on iOS. No
 FFmpeg, so it adds little to your app and raises no GPL questions.
