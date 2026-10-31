@@ -1,0 +1,75 @@
+group = "io.github.zalexei.video_compress_next"
+version = "1.0-SNAPSHOT"
+
+buildscript {
+    ext.kotlin_version = "2.1.0"
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.9.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+
+// Media3 1.9.x is the newest line that builds with compileSdk 35; 1.10+ needs
+// compileSdk 36. An app can pick another version in its android/gradle.properties:
+//   videoCompressNextMedia3Version=1.11.1
+def media3Version = rootProject.findProperty("videoCompressNextMedia3Version") ?: "1.9.4"
+def media3Minor = media3Version.tokenize(".")[1].toInteger()
+
+android {
+    namespace = "io.github.zalexei.video_compress_next"
+
+    compileSdk = media3Minor >= 10 ? 36 : 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+        test.java.srcDirs += "src/test/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 23
+    }
+
+    dependencies {
+        implementation("androidx.media3:media3-transformer:$media3Version")
+        implementation("androidx.media3:media3-effect:$media3Version")
+        implementation("androidx.media3:media3-common:$media3Version")
+        testImplementation("org.jetbrains.kotlin:kotlin-test")
+        testImplementation("org.mockito:mockito-core:5.0.0")
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+
+            testLogging {
+               events "passed", "skipped", "failed", "standardOut", "standardError"
+               outputs.upToDateWhen {false}
+               showStandardStreams = true
+            }
+        }
+    }
+}
