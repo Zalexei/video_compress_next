@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'video_compress_next'
-  s.version          = '0.1.1'
+  s.version          = '0.1.2'
   s.summary          = 'Drop-in replacement for video_compress: hardware video compression with AndroidX Media3 Transformer and AVFoundation, no FFmpeg.'
   s.description      = <<-DESC
 Drop-in replacement for video_compress: hardware video compression with AndroidX Media3 Transformer and AVFoundation, no FFmpeg.

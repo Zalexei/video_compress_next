@@ -1,3 +1,10 @@
+## 0.1.2
+
+* `VideoCompress.compressProgress$`: progress sent while nobody listens is
+  dropped. Before, it was buffered and the next `subscribe` got every stale
+  value of earlier compressions at once.
+* Tests for the compatibility layer, errors, options and media info.
+
 ## 0.1.1
 
 * iOS: Swift Package Manager support, which Flutter uses by default from

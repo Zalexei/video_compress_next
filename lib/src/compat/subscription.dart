@@ -10,9 +10,12 @@ class ObservableBuilder<T> {
   /// True until the first [subscribe].
   bool notSubscribed = true;
 
-  /// Sends [value] to the listener.
+  /// Sends [value] to the listener. Without a listener the value is dropped,
+  /// so a later [subscribe] does not get stale progress.
   void next(T value) {
-    if (!_observable.isClosed) _observable.add(value);
+    if (_observable.hasListener && !_observable.isClosed) {
+      _observable.add(value);
+    }
   }
 
   /// Starts listening; [Subscription.unsubscribe] stops it.
